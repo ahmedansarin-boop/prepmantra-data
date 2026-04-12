@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PrepMantra – Admin Panel</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0f0f1e;
+      --surface:    #1a1a2e;
+      --surface2:   #252540;
+      --border:     #2a2a45;
+      --primary:    #4F8EF7;
+      --accent:     #7C5CFC;
+      --text:       #e8e8f0;
+      --muted:      #8888a8;
+      --danger:     #CF6679;
+      --success:    #4CAF50;
+      --warn:       #f0a040;
+    }
+
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+           background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Header ──────────────────────────────────────────────── */
+    header {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 14px 24px; display: flex; align-items: center; gap: 12px;
+    }
+    header h1 { font-size: 18px; font-weight: 700; color: var(--primary); }
+    header span { font-size: 13px; color: var(--muted); }
+    .header-right { margin-left: auto; display: flex; gap: 10px; }
+
+    /* ── Layout ──────────────────────────────────────────────── */
+    .layout { display: grid; grid-template-columns: 300px 1fr; height: calc(100vh - 53px); }
+
+    /* ── Sidebar ─────────────────────────────────────────────── */
+    .sidebar { background: var(--surface); border-right: 1px solid var(--border);
+               display: flex; flex-direction: column; overflow: hidden; }
+    .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border);
+                      display: flex; align-items: center; justify-content: space-between; }
+    .sidebar-header h2 { font-size: 13px; font-weight: 700; color: var(--muted);
+                         text-transform: uppercase; letter-spacing: 1px; }
+    .sidebar-list { flex: 1; overflow-y: auto; padding: 8px; }
+
+    .category-item {
+      padding: 12px 14px; border-radius: 10px; cursor: pointer;
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 4px; border: 1px solid transparent; transition: all 0.15s;
+    }
+    .category-item:hover { background: var(--surface2); }
+    .category-item.active { background: rgba(79,142,247,0.12); border-color: rgba(79,142,247,0.3); }
+    .category-item .cat-icon { width: 34px; height: 34px; border-radius: 8px;
+      background: rgba(124,92,252,0.15); display: flex; align-items: center;
+      justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .category-item .cat-info { flex: 1; min-width: 0; }
+    .category-item .cat-name { font-size: 14px; font-weight: 600; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; }
+    .category-item .cat-count { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .category-item .del-btn { opacity: 0; background: none; border: none; cursor: pointer;
+      color: var(--danger); padding: 4px; border-radius: 4px; font-size: 16px;
+      line-height: 1; flex-shrink: 0; transition: opacity 0.15s; }
+    .category-item:hover .del-btn { opacity: 1; }
+
+    /* ── Main Panel ──────────────────────────────────────────── */
+    .main { display: flex; flex-direction: column; overflow: hidden; }
+
+    .main-header { padding: 16px 20px; border-bottom: 1px solid var(--border);
+                   display: flex; align-items: center; justify-content: space-between;
+                   background: var(--surface); flex-shrink: 0; }
+    .main-header h2 { font-size: 16px; font-weight: 700; }
+    .main-header span { font-size: 13px; color: var(--muted); }
+
+    .episode-list { flex: 1; overflow-y: auto; padding: 16px; }
+
+    .episode-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 16px; margin-bottom: 10px;
+      display: flex; gap: 14px; align-items: flex-start;
+    }
+    .ep-order { width: 28px; height: 28px; border-radius: 7px;
+      background: rgba(79,142,247,0.15); color: var(--primary);
+      font-size: 12px; font-weight: 700; display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0; margin-top: 2px; }
+    .ep-info { flex: 1; min-width: 0; }
+    .ep-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .ep-meta  { font-size: 12px; color: var(--muted); display: flex; gap: 12px; }
+    .ep-url   { font-size: 11px; color: var(--primary); margin-top: 6px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 400px; }
+    .ep-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    /* ── Empty State ─────────────────────────────────────────── */
+    .empty { display: flex; flex-direction: column; align-items: center;
+             justify-content: center; flex: 1; gap: 12px; color: var(--muted); }
+    .empty-icon { font-size: 48px; }
+    .empty p { font-size: 14px; }
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    .btn { display: inline-flex; align-items: center; gap: 6px; border: none;
+           border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
+           padding: 8px 14px; transition: opacity 0.15s; }
+    .btn:hover:not(:disabled) { opacity: 0.85; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary  { background: var(--primary); color: #fff; }
+    .btn-accent   { background: var(--accent); color: #fff; }
+    .btn-ghost    { background: var(--surface2); color: var(--text); }
+    .btn-danger   { background: transparent; color: var(--danger); padding: 4px 8px; }
+    .btn-sm       { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
+    .btn-success  { background: var(--success); color: #fff; }
+
+    /* ── Modal ───────────────────────────────────────────────── */
+    .overlay { display: none; position: fixed; inset: 0;
+               background: rgba(0,0,0,0.6); z-index: 100;
+               align-items: center; justify-content: center; }
+    .overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border);
+             border-radius: 16px; padding: 24px; width: 480px; max-width: 95vw;
+             max-height: 90vh; overflow-y: auto; }
+    .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+
+    /* ── Form ────────────────────────────────────────────────── */
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 12px; font-weight: 600;
+                   color: var(--muted); text-transform: uppercase;
+                   letter-spacing: 0.8px; margin-bottom: 6px; }
+    .field input, .field textarea, .field select {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 14px;
+      padding: 10px 12px; outline: none; transition: border-color 0.15s;
+      font-family: inherit;
+    }
+    .field input:focus, .field textarea:focus, .field select:focus {
+      border-color: var(--primary);
+    }
+    .field textarea { resize: vertical; min-height: 70px; }
+    .field input[type="file"] { padding: 8px; cursor: pointer; }
+
+    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    .upload-status { font-size: 12px; margin-top: 6px; padding: 8px 12px;
+                     border-radius: 6px; background: var(--surface2); }
+    .upload-status.uploading { color: var(--warn); }
+    .upload-status.done      { color: var(--success); }
+    .upload-status.error     { color: var(--danger); }
+
+    /* ── JSON Output ─────────────────────────────────────────── */
+    .json-section { border-top: 1px solid var(--border); background: var(--surface);
+                    padding: 16px 20px; flex-shrink: 0; }
+    .json-header { display: flex; align-items: center; justify-content: space-between;
+                   margin-bottom: 10px; }
+    .json-header h3 { font-size: 13px; font-weight: 700; color: var(--muted);
+                      text-transform: uppercase; letter-spacing: 1px; }
+    .json-output { background: var(--surface2); border: 1px solid var(--border);
+                   border-radius: 8px; padding: 12px; font-family: 'Courier New', monospace;
+                   font-size: 11px; color: #a0d0a0; line-height: 1.5;
+                   max-height: 200px; overflow-y: auto; white-space: pre; }
+
+    /* ── Scrollbar ───────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────────── -->
+<header>
+  <span style="font-size:20px">🎧</span>
+  <h1>PrepMantra</h1>
+  <span>Admin Panel</span>
+  <div class="header-right">
+    <button class="btn btn-ghost btn-sm" onclick="generateJSON()">Generate JSON</button>
+    <button class="btn btn-success btn-sm" onclick="downloadJSON()">⬇ Download data.json</button>
+  </div>
+</header>
+
+<!-- ── Layout ──────────────────────────────────────────────────────────────── -->
+<div class="layout">
+
+  <!-- Sidebar: Categories -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>Categories</h2>
+      <button class="btn btn-primary btn-sm" onclick="openAddCategory()">+ Add</button>
+    </div>
+    <div class="sidebar-list" id="categoryList">
+      <!-- rendered by JS -->
+    </div>
+  </aside>
+
+  <!-- Main: Episodes -->
+  <main class="main">
+    <div class="main-header">
+      <div>
+        <h2 id="selectedCatName">Select a category</h2>
+        <span id="selectedCatId" style="color: var(--muted); font-size: 12px;"></span>
+      </div>
+      <button class="btn btn-accent btn-sm" id="addEpBtn" onclick="openAddEpisode()" disabled>+ Add Episode</button>
+    </div>
+
+    <div class="episode-list" id="episodeList">
+      <div class="empty">
+        <div class="empty-icon">📂</div>
+        <p>Select a category from the left panel</p>
+      </div>
+    </div>
+
+    <!-- JSON Output -->
+    <div class="json-section">
+      <div class="json-header">
+        <h3>data.json output</h3>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="copyJSON()">Copy JSON</button>
+          <button class="btn btn-ghost btn-sm" onclick="generateJSON()">Refresh</button>
+        </div>
+      </div>
+      <div class="json-output" id="jsonOutput">Click "Generate JSON" to preview the output.</div>
+    </div>
+  </main>
+</div>
+
+<!-- ── Add Category Modal ──────────────────────────────────────────────────── -->
+<div class="overlay" id="catModal">
+  <div class="modal">
+    <h3>Add Category</h3>
+    <div class="field">
+      <label>Category ID <span style="color:var(--muted);font-weight:400;text-transform:none;">(slug, no spaces, e.g. "history")</span></label>
+      <input type="text" id="catId" placeholder="history" oninput="sanitizeId('catId')" />
+    </div>
+    <div class="field">
+      <label>Category Name</label>
+      <input type="text" id="catName" placeholder="History" oninput="autoId()" list="catSuggestions" autocomplete="off" />
+      <datalist id="catSuggestions"></datalist>
+      <div id="catDupWarn" style="display:none;font-size:12px;color:var(--warn);margin-top:6px;">⚠ This category already exists — click it in the sidebar instead.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCatModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="addCategory()">Add Category</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add Episode Modal ───────────────────────────────────────────────────── -->
+<div class="overlay" id="epModal">
+  <div class="modal">
+    <h3>Add Episode</h3>
+    <div class="field">
+      <label>Episode ID <span style="color:var(--muted);font-weight:400;text-transform:none;">(e.g. "hist_1")</span></label>
+      <input type="text" id="epId" placeholder="hist_1" oninput="sanitizeId('epId')" />
+    </div>
+    <div class="field">
+      <label>Title</label>
+      <input type="text" id="epTitle" placeholder="Vedic Period" />
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="epDesc" placeholder="Brief description of this episode..."></textarea>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <div class="field">
+        <label>Duration (seconds)</label>
+        <input type="number" id="epDuration" placeholder="480" min="1" />
+      </div>
+      <div class="field">
+        <label>Order</label>
+        <input type="number" id="epOrder" placeholder="1" min="1" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Audio File (upload to Telegram)</label>
+      <input type="file" id="epAudioFile" accept="audio/*" onchange="onFileSelected()" />
+      <div class="upload-status" id="uploadStatus" style="display:none;"></div>
+    </div>
+    <div class="field">
+      <label>Audio URL <span style="color:var(--muted);font-weight:400;text-transform:none;">(auto-filled after upload, or paste manually)</span></label>
+      <input type="text" id="epAudioUrl" placeholder="http://localhost:3000/stream/..." />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeEpModal()">Cancel</button>
+      <button class="btn btn-accent" id="uploadBtn" onclick="uploadAndFill()" style="display:none">Upload Audio</button>
+      <button class="btn btn-primary" onclick="addEpisode()">Save Episode</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── State ─────────────────────────────────────────────────────────────────────
+  const BACKEND = 'http://localhost:3000';
+  const LS_KEY  = 'prepmantra_admin_data';
+
+  let state = {
+    categories: []
+  };
+
+  let selectedCatIndex = null;
+
+  // ── Persistence: load from localStorage ───────────────────────────────────────
+  function loadState() {
+    try {
+      const saved = localStorage.getItem(LS_KEY);
+      if (saved) state = JSON.parse(saved);
+    } catch (e) { /* ignore */ }
+  }
+
+  function saveState() {
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+  }
+
+  // ── Helper: generate slug from text ───────────────────────────────────────────
+  function slugify(text) {
+    return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  }
+
+  function sanitizeId(inputId) {
+    const el = document.getElementById(inputId);
+    el.value = slugify(el.value.replace(/\s/g, '_'));
+  }
+
+  function autoId() {
+    const nameEl  = document.getElementById('catName');
+    const warnEl  = document.getElementById('catDupWarn');
+    const name    = nameEl.value;
+    const newId   = slugify(name);
+    document.getElementById('catId').value = newId;
+
+    // Warn if this category already exists
+    const dup = state.categories.find(c =>
+      c.id === newId || c.name.toLowerCase() === name.toLowerCase()
+    );
+    warnEl.style.display = dup ? 'block' : 'none';
+  }
+
+  // ── Update datalist with existing category names ───────────────────────────────
+  function updateCatDatalist() {
+    const dl = document.getElementById('catSuggestions');
+    dl.innerHTML = state.categories
+      .map(c => `<option value="${c.name}">ID: ${c.id}</option>`)
+      .join('');
+  }
+
+  // ── Render Categories ──────────────────────────────────────────────────────────
+  function renderCategories() {
+    const list = document.getElementById('categoryList');
+    list.innerHTML = '';
+
+    if (state.categories.length === 0) {
+      list.innerHTML = `<div style="padding:24px 16px; text-align:center; color:var(--muted); font-size:13px;">
+        No categories yet.<br>Click "+ Add" to create one.
+      </div>`;
+      return;
+    }
+
+    state.categories.forEach((cat, i) => {
+      const div = document.createElement('div');
+      div.className = 'category-item' + (selectedCatIndex === i ? ' active' : '');
+      div.innerHTML = `
+        <div class="cat-icon">📁</div>
+        <div class="cat-info">
+          <div class="cat-name">${cat.name}</div>
+          <div class="cat-count">${cat.episodes.length} episode${cat.episodes.length !== 1 ? 's' : ''} · #${cat.id}</div>
+        </div>
+        <button class="del-btn" title="Delete category" onclick="deleteCategory(event, ${i})">✕</button>
+      `;
+      div.addEventListener('click', () => selectCategory(i));
+      list.appendChild(div);
+    });
+  }
+
+  // ── Render Episodes ────────────────────────────────────────────────────────────
+  function renderEpisodes() {
+    const list = document.getElementById('episodeList');
+
+    if (selectedCatIndex === null) {
+      list.innerHTML = `<div class="empty">
+        <div class="empty-icon">📂</div>
+        <p>Select a category from the left panel</p>
+      </div>`;
+      return;
+    }
+
+    const cat = state.categories[selectedCatIndex];
+    document.getElementById('selectedCatName').textContent = cat.name;
+    document.getElementById('selectedCatId').textContent   = `ID: ${cat.id}`;
+    document.getElementById('addEpBtn').disabled = false;
+
+    if (cat.episodes.length === 0) {
+      list.innerHTML = `<div class="empty">
+        <div class="empty-icon">🎵</div>
+        <p>No episodes yet. Click "+ Add Episode" to add one.</p>
+      </div>`;
+      return;
+    }
+
+    const sorted = [...cat.episodes].sort((a, b) => a.order - b.order);
+
+    list.innerHTML = sorted.map(ep => `
+      <div class="episode-card">
+        <div class="ep-order">${ep.order}</div>
+        <div class="ep-info">
+          <div class="ep-title">${ep.title}</div>
+          <div class="ep-meta">
+            <span>🕐 ${Math.floor(ep.duration / 60)}m ${ep.duration % 60}s</span>
+            <span style="color:var(--muted)">ID: ${ep.id}</span>
+          </div>
+          <div class="ep-url" title="${ep.audio_url || 'No audio URL'}">${ep.audio_url || '⚠ No audio URL'}</div>
+        </div>
+        <div class="ep-actions">
+          <button class="btn btn-danger btn-sm" onclick="deleteEpisode('${ep.id}')">✕</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function render() {
+    renderCategories();
+    renderEpisodes();
+    updateCatDatalist();
+    generateJSON();
+  }
+
+  // ── Select Category ────────────────────────────────────────────────────────────
+  function selectCategory(index) {
+    selectedCatIndex = index;
+    render();
+    document.getElementById('episodeList').scrollTop = 0;
+  }
+
+  // ── Add / Delete Category ──────────────────────────────────────────────────────
+  function openAddCategory() {
+    document.getElementById('catId').value   = '';
+    document.getElementById('catName').value = '';
+    document.getElementById('catDupWarn').style.display = 'none';
+    document.getElementById('catModal').classList.add('open');
+    setTimeout(() => document.getElementById('catName').focus(), 50);
+  }
+
+  function closeCatModal() {
+    document.getElementById('catModal').classList.remove('open');
+  }
+
+  function addCategory() {
+    const id   = document.getElementById('catId').value.trim();
+    const name = document.getElementById('catName').value.trim();
+
+    if (!id || !name) { alert('ID and Name are required.'); return; }
+
+    // Block duplicate id OR name
+    if (state.categories.find(c => c.id === id)) {
+      alert(`A category with ID "${id}" already exists. Click it in the sidebar.`);
+      return;
+    }
+    if (state.categories.find(c => c.name.toLowerCase() === name.toLowerCase())) {
+      alert(`A category named "${name}" already exists. Click it in the sidebar.`);
+      return;
+    }
+
+    state.categories.push({ id, name, episodes: [] });
+    saveState();
+    closeCatModal();
+    selectedCatIndex = state.categories.length - 1;
+    render();
+  }
+
+  function deleteCategory(e, index) {
+    e.stopPropagation();
+    const cat = state.categories[index];
+    if (!confirm(`Delete category "${cat.name}" and all its episodes?`)) return;
+    state.categories.splice(index, 1);
+    if (selectedCatIndex === index) selectedCatIndex = null;
+    else if (selectedCatIndex > index) selectedCatIndex--;
+    saveState();
+    render();
+  }
+
+  // ── Add / Delete Episode ───────────────────────────────────────────────────────
+  function openAddEpisode() {
+    if (selectedCatIndex === null) return;
+    // Auto-fill order with next number
+    const cat = state.categories[selectedCatIndex];
+    const nextOrder = cat.episodes.length + 1;
+
+    document.getElementById('epId').value       = '';
+    document.getElementById('epTitle').value    = '';
+    document.getElementById('epDesc').value     = '';
+    document.getElementById('epDuration').value = '';
+    document.getElementById('epOrder').value    = nextOrder;
+    document.getElementById('epAudioUrl').value = '';
+    document.getElementById('epAudioFile').value = '';
+    document.getElementById('uploadStatus').style.display = 'none';
+    document.getElementById('uploadBtn').style.display    = 'none';
+
+    document.getElementById('epModal').classList.add('open');
+    setTimeout(() => document.getElementById('epTitle').focus(), 50);
+  }
+
+  function closeEpModal() {
+    document.getElementById('epModal').classList.remove('open');
+  }
+
+  // ── Filename parser: extract episode number + clean title ────────────────────
+  // Handles: "Episode-2-Vividhta-humein-kaise.mp3"
+  //          "Episode_3_भारत_की_संस्कृति.m4a"
+  //          "03 - Some Title.mp3"
+  //          "Some Title.mp3"  (no number → returns null for order)
+  function parseFilename(filename) {
+    // Remove extension
+    const base = filename.replace(/\.[^.]+$/, '');
+
+    // Pattern A: Episode-{N}-{title}  or  Episode_{N}_{title}
+    const matchA = base.match(/^[Ee]pisode[-_ ](\d+)[-_ ]+(.+)$/);
+    if (matchA) {
+      return {
+        order: parseInt(matchA[1]),
+        title: matchA[2].replace(/[-_]+/g, ' ').trim(),
+      };
+    }
+
+    // Pattern B: {N} - {title}  or  {N}. {title}
+    const matchB = base.match(/^(\d{1,3})[\-\.\s]+(.+)$/);
+    if (matchB) {
+      return {
+        order: parseInt(matchB[1]),
+        title: matchB[2].replace(/[-_]+/g, ' ').trim(),
+      };
+    }
+
+    // Pattern C: {title}_{N}  (title first, number at end)
+    const matchC = base.match(/^(.+?)[-_ ]+(\d{1,3})$/);
+    if (matchC) {
+      return {
+        order: parseInt(matchC[2]),
+        title: matchC[1].replace(/[-_]+/g, ' ').trim(),
+      };
+    }
+
+    // No number found — use full name as title
+    return { order: null, title: base.replace(/[-_]+/g, ' ').trim() };
+  }
+
+  // ── Get real audio duration from file (no upload needed) ──────────────────────
+  function getAudioDuration(file) {
+    return new Promise((resolve) => {
+      const audio = document.createElement('audio');
+      const url   = URL.createObjectURL(file);
+      audio.preload = 'metadata';
+      audio.addEventListener('loadedmetadata', () => {
+        URL.revokeObjectURL(url);
+        const dur = Math.round(audio.duration);
+        resolve(isFinite(dur) && dur > 0 ? dur : null);
+      });
+      audio.addEventListener('error', () => { URL.revokeObjectURL(url); resolve(null); });
+      audio.src = url;
+    });
+  }
+
+  async function onFileSelected() {
+    const file = document.getElementById('epAudioFile').files[0];
+    if (!file) return;
+
+    const mb     = (file.size / (1024 * 1024)).toFixed(1);
+    const status = document.getElementById('uploadStatus');
+    status.style.display = 'block';
+    status.className = 'upload-status uploading';
+    status.textContent = `📂 ${file.name} · ${mb}MB — reading file...`;
+
+    // 1. Parse filename → auto-fill title, order, ID
+    const parsed = parseFilename(file.name);
+    if (parsed.title && !document.getElementById('epTitle').value) {
+      document.getElementById('epTitle').value = parsed.title;
+    }
+    if (parsed.order && !document.getElementById('epOrder').value) {
+      document.getElementById('epOrder').value = parsed.order;
+    }
+
+    // Auto-generate episode ID
+    if (!document.getElementById('epId').value && selectedCatIndex !== null) {
+      const catId  = state.categories[selectedCatIndex].id;
+      const order  = parsed.order || (state.categories[selectedCatIndex].episodes.length + 1);
+      const slug   = slugify(parsed.title).slice(0, 20);
+      document.getElementById('epId').value = `${catId}_${order}_${slug}`;
+    }
+
+    // 2. Auto-detect real duration from audio metadata
+    const dur = await getAudioDuration(file);
+    if (dur !== null && !document.getElementById('epDuration').value) {
+      document.getElementById('epDuration').value = dur;
+      const mins = Math.floor(dur / 60);
+      const secs = dur % 60;
+      status.className = 'upload-status done';
+      status.textContent = `${file.size > 20*1024*1024 ? '⚠ Large file — will be auto-compressed · ' : '✅ '}`
+        + `${mb}MB · Duration detected: ${mins}m ${secs}s`;
+    } else {
+      status.className = 'upload-status' + (file.size > 20*1024*1024 ? ' uploading' : ' done');
+      status.textContent = file.size > 20 * 1024 * 1024
+        ? `⚠ ${mb}MB — will be auto-compressed by server · enter duration manually`
+        : `✅ ${mb}MB · enter duration if not detected`;
+    }
+
+    document.getElementById('uploadBtn').style.display = 'inline-flex';
+  }
+
+  async function uploadAndFill() {
+    const fileInput = document.getElementById('epAudioFile');
+    const file = fileInput.files[0];
+    if (!file) { alert('Select a file first.'); return; }
+
+    const btn    = document.getElementById('uploadBtn');
+    const status = document.getElementById('uploadStatus');
+    const mb     = (file.size / (1024 * 1024)).toFixed(1);
+
+    btn.disabled = true;
+    btn.textContent = 'Uploading...';
+    status.style.display = 'block';
+    status.className = 'upload-status uploading';
+    status.textContent = `Uploading ${file.name} (${mb}MB)... ${file.size > 20 * 1024 * 1024 ? 'compressing first, please wait...' : ''}`;
+
+    const formData = new FormData();
+    formData.append('audio', file);
+
+    try {
+      const res  = await fetch(`${BACKEND}/upload`, { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) throw new Error(data.error || 'Upload failed');
+
+      // Fill in the audio URL automatically
+      document.getElementById('epAudioUrl').value = data.stream_url;
+
+      // Auto-fill episode ID from title if empty
+      if (!document.getElementById('epId').value) {
+        const title = document.getElementById('epTitle').value;
+        const catId = state.categories[selectedCatIndex].id;
+        const epNum = state.categories[selectedCatIndex].episodes.length + 1;
+        document.getElementById('epId').value = title
+          ? `${catId}_${epNum}_${slugify(title).slice(0, 15)}`
+          : `${catId}_${epNum}`;
+      }
+
+      status.className = 'upload-status done';
+      status.textContent = data.was_compressed
+        ? `✅ Compressed ${data.original_mb}MB → ${data.compressed_mb}MB · Uploaded to Telegram`
+        : `✅ Uploaded to Telegram (${data.original_mb}MB)`;
+
+    } catch (err) {
+      status.className = 'upload-status error';
+      status.textContent = `❌ Upload failed: ${err.message}`;
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Upload Audio';
+  }
+
+  function addEpisode() {
+    const id       = document.getElementById('epId').value.trim();
+    const title    = document.getElementById('epTitle').value.trim();
+    const desc     = document.getElementById('epDesc').value.trim();
+    const duration = parseInt(document.getElementById('epDuration').value, 10);
+    const order    = parseInt(document.getElementById('epOrder').value, 10);
+    const audioUrl = document.getElementById('epAudioUrl').value.trim();
+
+    if (!id)       { alert('Episode ID is required.'); return; }
+    if (!title)    { alert('Title is required.'); return; }
+    if (!duration) { alert('Duration is required (in seconds).'); return; }
+    if (!order)    { alert('Order is required.'); return; }
+
+    const cat = state.categories[selectedCatIndex];
+    if (cat.episodes.find(e => e.id === id)) { alert(`Episode ID "${id}" already exists in this category.`); return; }
+
+    cat.episodes.push({
+      id,
+      title,
+      description: desc,
+      audio_url:   audioUrl,
+      duration,
+      order,
+    });
+
+    saveState();
+    closeEpModal();
+    render();
+  }
+
+  function deleteEpisode(epId) {
+    if (!confirm('Delete this episode?')) return;
+    const cat = state.categories[selectedCatIndex];
+    cat.episodes = cat.episodes.filter(e => e.id !== epId);
+    saveState();
+    render();
+  }
+
+  // ── JSON Output ────────────────────────────────────────────────────────────────
+  function getJSON() {
+    return JSON.stringify({ categories: state.categories }, null, 2);
+  }
+
+  function generateJSON() {
+    document.getElementById('jsonOutput').textContent = getJSON();
+  }
+
+  function copyJSON() {
+    navigator.clipboard.writeText(getJSON())
+      .then(() => alert('JSON copied to clipboard!'))
+      .catch(() => alert('Copy failed — try selecting the text manually.'));
+  }
+
+  function downloadJSON() {
+    const blob = new Blob([getJSON()], { type: 'application/json' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = 'data.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  // ── Close modal on overlay click ───────────────────────────────────────────────
+  document.getElementById('catModal').addEventListener('click', function(e) {
+    if (e.target === this) closeCatModal();
+  });
+  document.getElementById('epModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEpModal();
+  });
+
+  // ── Keyboard shortcuts ─────────────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeCatModal(); closeEpModal(); }
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────────────
+  loadState();
+  render();
+</script>
+</body>
+</html>

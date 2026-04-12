@@ -1,0 +1,170 @@
+{
+  "categories": [
+    {
+      "id": "history",
+      "name": "History",
+      "episodes": [
+        {
+          "id": "hist_1",
+          "title": "Ancient India – Vedic Period",
+          "description": "Overview of the Vedic Age, social and political structure, and key texts.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 480,
+          "order": 1
+        },
+        {
+          "id": "hist_2",
+          "title": "Maurya Empire",
+          "description": "Chandragupta Maurya, Ashoka, and the peak of the Mauryan dynasty.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 540,
+          "order": 2
+        },
+        {
+          "id": "hist_3",
+          "title": "Medieval India – Delhi Sultanate",
+          "description": "Rise of the Delhi Sultanate and major sultanate dynasties.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 600,
+          "order": 3
+        },
+        {
+          "id": "hist_4",
+          "title": "Mughal Empire",
+          "description": "Key Mughal rulers, administration, and cultural contributions.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 660,
+          "order": 4
+        },
+        {
+          "id": "hist_5",
+          "title": "British Colonial Period",
+          "description": "East India Company, major revolts, and British policies in India.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 720,
+          "order": 5
+        }
+      ]
+    },
+    {
+      "id": "polity",
+      "name": "Indian Polity",
+      "episodes": [
+        {
+          "id": "pol_1",
+          "title": "Indian Constitution – Overview",
+          "description": "Preamble, sources and key features of the Indian Constitution.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 520,
+          "order": 1
+        },
+        {
+          "id": "pol_2",
+          "title": "Fundamental Rights",
+          "description": "Articles 12-35: rights, restrictions, and landmark judgements.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 600,
+          "order": 2
+        },
+        {
+          "id": "pol_3",
+          "title": "Directive Principles of State Policy",
+          "description": "Articles 36-51: nature, classification, and importance of DPSPs.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 480,
+          "order": 3
+        },
+        {
+          "id": "pol_4",
+          "title": "Parliament of India",
+          "description": "Lok Sabha, Rajya Sabha – composition, powers, and sessions.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 580,
+          "order": 4
+        }
+      ]
+    },
+    {
+      "id": "geography",
+      "name": "Geography",
+      "episodes": [
+        {
+          "id": "geo_1",
+          "title": "Physical Geography of India",
+          "description": "Physiographic divisions, major mountain ranges, plains, and plateaus.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 500,
+          "order": 1
+        },
+        {
+          "id": "geo_2",
+          "title": "Rivers of India",
+          "description": "Himalayan and Peninsular rivers, major dams, and river systems.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 460,
+          "order": 2
+        },
+        {
+          "id": "geo_3",
+          "title": "Indian Climate",
+          "description": "Monsoon mechanism, climate types, and seasonal patterns.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 440,
+          "order": 3
+        }
+      ]
+    },
+    {
+      "id": "adpo_law",
+      "name": "Bihar ADPO – Law & Procedure",
+      "episodes": [
+        {
+          "id": "law_1",
+          "title": "Code of Criminal Procedure (CrPC) – Overview",
+          "description": "Key provisions, magistrate powers, and trial procedure under CrPC.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 700,
+          "order": 1
+        },
+        {
+          "id": "law_2",
+          "title": "Indian Penal Code (IPC) – Key Offences",
+          "description": "Offences against person, property, and state under IPC.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 760,
+          "order": 2
+        },
+        {
+          "id": "law_3",
+          "title": "Indian Evidence Act",
+          "description": "Admissibility, burden of proof, and types of evidence.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 640,
+          "order": 3
+        }
+      ]
+    },
+    {
+      "id": "economy",
+      "name": "Indian Economy",
+      "episodes": [
+        {
+          "id": "eco_1",
+          "title": "Economic Planning in India",
+          "description": "Five-year plans, NITI Aayog, and economic reforms since 1991.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 520,
+          "order": 1
+        },
+        {
+          "id": "eco_2",
+          "title": "Banking and Finance",
+          "description": "RBI, commercial banks, monetary policy, and financial inclusion.",
+          "audio_url": "PASTE_TELEGRAM_CDN_LINK_HERE",
+          "duration": 480,
+          "order": 2
+        }
+      ]
+    }
+  ]
+}

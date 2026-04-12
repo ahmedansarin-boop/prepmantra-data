@@ -1,0 +1,77 @@
+name: prepmantra_audio_app
+description: PrepMantra - Audio Learning App for Bihar ADPO Exam Preparation
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ── State Management ──────────────────────────────────────────
+  flutter_riverpod: ^2.5.1          # Reactive state management
+  riverpod_annotation: ^2.3.5       # Code-gen annotations for Riverpod
+
+  # ── Navigation ────────────────────────────────────────────────
+  go_router: ^13.2.0                # Declarative routing
+
+  # ── Audio Playback ────────────────────────────────────────────
+  just_audio: ^0.9.39               # Core audio player engine
+  just_audio_background: ^0.0.1-beta.12  # Background play + lock screen controls
+  audio_session: ^0.1.21            # Audio focus management (Android/iOS)
+
+  # ── Networking ────────────────────────────────────────────────
+  dio: ^5.4.3                       # HTTP client — fetches GitHub raw JSON
+
+  # ── Local Storage & Downloads ─────────────────────────────────
+  hive_flutter: ^1.1.0              # Fast local DB for caching episodes/categories
+  shared_preferences: ^2.2.3        # Persists simple flags (onboarding, theme)
+  path_provider: ^2.1.3             # Gets app directories for downloaded files
+
+  # ── Permissions ───────────────────────────────────────────────
+  permission_handler: ^11.3.1       # Runtime permissions (storage, notifications)
+
+  # ── Dependency Injection ──────────────────────────────────────
+  get_it: ^7.6.7                    # Service locator
+
+  # ── Models / Serialization ────────────────────────────────────
+  freezed_annotation: ^2.4.1        # Immutable model generation
+  json_annotation: ^4.8.1           # JSON serialization annotations
+
+  # ── UI Utilities ──────────────────────────────────────────────
+  cached_network_image: ^3.3.1      # Thumbnail caching with placeholder
+  flutter_svg: ^2.0.10+1            # SVG asset support for icons
+  shimmer: ^3.0.0                    # Skeleton loaders while fetching data
+  lottie: ^3.1.0                     # Lottie animations (splash, empty states)
+
+  # ── Utilities ─────────────────────────────────────────────────
+  equatable: ^2.0.5                  # Value equality without boilerplate
+  dartz: ^0.10.1                     # Functional Either<Failure, Success> for errors
+  intl: ^0.19.0                      # Date formatting, duration display
+  logger: ^2.3.0                     # Structured debug logging
+
+  cupertino_icons: ^1.0.8
+  audio_service: ^0.18.18
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # ── Code Generation ───────────────────────────────────────────
+  build_runner: ^2.4.9              # Runs all code generators
+  freezed: ^2.4.7                   # Generates immutable model classes
+  json_serializable: ^6.8.0         # Generates fromJson/toJson
+  riverpod_generator: ^2.4.0        # Generates @riverpod providers
+
+  # ── Linting ───────────────────────────────────────────────────
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/audio/

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PrepMantra – Audio Upload</title>
+  <style>
+    body    { font-family: sans-serif; max-width: 640px; margin: 40px auto; padding: 0 20px; background: #0f0f1e; color: #e8e8f0; }
+    h2      { color: #4F8EF7; margin-bottom: 4px; }
+    p       { color: #B0B0C8; font-size: 14px; margin-top: 4px; }
+    input[type="file"] { display: block; margin: 16px 0; font-size: 14px; }
+    button  { background: #4F8EF7; color: white; border: none; padding: 10px 28px; border-radius: 8px; cursor: pointer; font-size: 15px; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    pre     { background: #1a1a2e; padding: 16px; border-radius: 8px; font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; margin: 6px 0 0; }
+    .label  { color: #7C5CFC; font-weight: bold; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-top: 20px; margin-bottom: 0; display: flex; align-items: center; gap: 8px; }
+    .copy   { background: #252540; color: #B0B0C8; font-size: 11px; padding: 3px 10px; border-radius: 4px; border: none; cursor: pointer; }
+    .copy:hover { background: #3a3a60; }
+    .ok     { background: #0a2a0a; border: 1px solid #2a7a2a; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #80e080; margin: 12px 0; }
+    .info   { background: #0a1a2a; border: 1px solid #1a4a7a; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #80b0e0; margin: 12px 0; }
+    .err    { background: #2a0a0a; border: 1px solid #7a2a2a; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #e08080; margin: 12px 0; }
+  </style>
+</head>
+<body>
+  <h2>🎧 PrepMantra – Audio Upload</h2>
+  <p>Upload any audio file — any size, any format.<br>
+  Files &gt;20MB are <strong>automatically compressed</strong> by the server before uploading to Telegram.</p>
+
+  <input type="file" id="fileInput" accept="audio/*" onchange="showSize()" />
+  <div id="sizeInfo"></div>
+
+  <button id="uploadBtn" onclick="uploadFile()">Upload to Telegram</button>
+  <div id="status"></div>
+  <div id="result" style="display:none">
+    <div id="msgBox"></div>
+
+    <div class="label">file_id (permanent) <button class="copy" onclick="copy('fileId')">Copy</button></div>
+    <pre id="fileId"></pre>
+
+    <div class="label">stream_url → paste as audio_url in data.json <button class="copy" onclick="copy('streamUrl')">Copy</button></div>
+    <pre id="streamUrl"></pre>
+
+    <div class="label">Full JSON</div>
+    <pre id="fullResponse"></pre>
+  </div>
+
+  <script>
+    function showSize() {
+      const file = document.getElementById('fileInput').files[0];
+      if (!file) return;
+      const mb = (file.size / (1024 * 1024)).toFixed(1);
+      const info = document.getElementById('sizeInfo');
+      if (file.size > 20 * 1024 * 1024) {
+        info.innerHTML = `<div class="info">ℹ️ File: <strong>${file.name}</strong> — ${mb} MB<br>
+          Larger than 20MB — server will <strong>auto-compress</strong> to 64kbps mono MP3 before uploading. This may take 30–60 seconds.</div>`;
+      } else {
+        info.innerHTML = `<div class="ok">✅ ${file.name} — ${mb} MB — will upload as-is.</div>`;
+      }
+    }
+
+    async function uploadFile() {
+      const file = document.getElementById('fileInput').files[0];
+      if (!file) { alert('Select a file first.'); return; }
+
+      const btn    = document.getElementById('uploadBtn');
+      const status = document.getElementById('status');
+      const result = document.getElementById('result');
+      const mb     = (file.size / (1024 * 1024)).toFixed(1);
+
+      btn.disabled = true;
+      result.style.display = 'none';
+
+      if (file.size > 20 * 1024 * 1024) {
+        status.innerHTML = `<div class="info">⏳ Compressing + uploading "${file.name}" (${mb} MB)...<br>This will take 30–90 seconds for large files. Please wait.</div>`;
+      } else {
+        status.innerHTML = `<div class="info">⏳ Uploading "${file.name}" (${mb} MB)...</div>`;
+      }
+
+      const formData = new FormData();
+      formData.append('audio', file);
+
+      try {
+        const res  = await fetch('http://localhost:3000/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          status.innerHTML = `<div class="err">❌ Error: ${data.error}</div>`;
+          btn.disabled = false;
+          return;
+        }
+
+        status.innerHTML = '';
+        result.style.display = 'block';
+
+        // Build message
+        let msg = '✅ Upload complete!';
+        if (data.was_compressed) {
+          msg += ` Auto-compressed: <strong>${data.original_mb}MB → ${data.compressed_mb}MB</strong>`;
+        }
+        document.getElementById('msgBox').innerHTML = `<div class="ok">${msg}</div>`;
+
+        document.getElementById('fileId').textContent    = data.file_id;
+        document.getElementById('streamUrl').textContent = data.stream_url;
+        document.getElementById('fullResponse').textContent = JSON.stringify(data, null, 2);
+
+      } catch (err) {
+        status.innerHTML = `<div class="err">❌ ${err.message}<br>Is the server running at http://localhost:3000?</div>`;
+      }
+
+      btn.disabled = false;
+    }
+
+    function copy(id) {
+      const text = document.getElementById(id).textContent;
+      navigator.clipboard.writeText(text).then(() => alert('Copied!'));
+    }
+  </script>
+</body>
+</html>
