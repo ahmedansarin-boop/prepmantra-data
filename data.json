@@ -1,3 +1,19 @@
 {
-  "categories": []
+  "categories": [
+    {
+      "id": "adpo_history",
+      "name": "ADPO History",
+      "description": "",
+      "episodes": [
+        {
+          "id": "adpo_history_1_16_महाजनपद_और_मगध_का",
+          "title": "16 महाजनपद और मगध का उदय",
+          "description": "",
+          "audio_url": "http://prepmantra-data.onrender.com/stream/CQACAgUAAyEGAATt1pZBAAMNadt6Ovt9jJ_GhOqxoxWtjsMaH24AAn0bAALQc9lWCseY6Q9-4qo7BA",
+          "duration": 940,
+          "order": 1
+        }
+      ]
+    }
+  ]
 }
