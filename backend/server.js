@@ -141,7 +141,7 @@ app.post('/upload', upload.single('audio'), async (req, res) => {
     return res.json({
       success:       true,
       file_id:       fileId,          // ← permanent — store in data.json
-      stream_url:    `http://localhost:${PORT}/stream/${fileId}`,
+      stream_url:    `${req.protocol}://${req.get('host')}/stream/${fileId}`,
       telegram_url:  telegramUrl,
       original_mb:   originalMB,
       compressed_mb: wasCompressed ? compressedMB : null,
@@ -169,6 +169,11 @@ app.get('/stream/:fileId', async (req, res) => {
   }
 });
 
+// ─── GET / ─────────────────────────────────────────────────────────────────────
+app.get('/', (_req, res) => {
+  res.send('PrepMantra backend running 🎧');
+});
+
 // ─── GET /health ───────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -183,7 +188,8 @@ app.use((err, _req, res, _next) => {
 // ─── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`PrepMantra backend running on http://localhost:${PORT}`);
+  console.log(`  GET  /           — health (Render ping)`);
   console.log(`  POST /upload     — upload any audio (auto-compresses if > 20MB)`);
   console.log(`  GET  /stream/:id — stream via file_id`);
-  console.log(`  GET  /health     — health check`);
+  console.log(`  GET  /health     — health check JSON`);
 });
