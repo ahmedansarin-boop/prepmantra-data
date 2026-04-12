@@ -1,0 +1,19 @@
+{
+  "categories": [
+    {
+      "id": "adpo",
+      "name": "Adpo",
+      "description": "",
+      "episodes": [
+        {
+          "id": "adpo_1_प्रारंभिक_और_उत्तर_व",
+          "title": "प्रारंभिक और उत्तर वैदिक काल की कहानी",
+          "description": "",
+          "audio_url": "http://localhost:3000/stream/CQACAgUAAyEGAATt1pZBAAMMadthvNaj8EFhjFCsQVylg1H9kiYAAjkbAALQc9lWcAy_tbr23XA7BA",
+          "duration": 1150,
+          "order": 1
+        }
+      ]
+    }
+  ]
+}
