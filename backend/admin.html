@@ -1077,10 +1077,10 @@
       <div class="modal-title">⚙ GitHub Sync Settings</div>
 
       <div style="background:rgba(79,142,247,.08);border:1px solid rgba(79,142,247,.2);
-         border-radius:8px;padding:10px 13px;font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.6">
-        Your personal access token is stored only in this browser's localStorage and is
-        never sent anywhere except directly to <strong style="color:var(--primary)">api.github.com</strong>.
-        It is never logged to the console.
+         border-radius:8px;padding:10px 13px;font-size:12px;color:var(--text);margin-bottom:16px;line-height:1.6">
+        🚀 <strong style="color:var(--primary)">Unified Sync Mode active.</strong><br/>
+        All changes are automatically synced to GitHub using your local computer's Git credentials.
+        You no longer need to manage tokens in the browser.
       </div>
 
       <div class="field-row">
@@ -1118,8 +1118,7 @@
       </div>
 
       <div class="modal-footer">
-        <button class="btn btn-ghost" onclick="closeGHModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveGHConfig()">Save Settings</button>
+        <button class="btn btn-ghost" onclick="closeGHModal()">Close</button>
       </div>
     </div>
   </div>
@@ -1138,7 +1137,9 @@
     document.getElementById('baseUrlInput').value = BASE_URL;
 
     function forceHttps(url) {
-      return url.trim().replace(/\/$/, '').replace(/^http:\/\//i, 'https://');
+      url = url.trim().replace(/\/$/, '');
+      if (url.includes('localhost') || url.includes('127.0.0.1')) return url;
+      return url.replace(/^http:\/\//i, 'https://');
     }
 
     function updateBaseUrl() {
@@ -1947,12 +1948,10 @@
     }
 
     function updateGHDot() {
-      const c = getGHConfig();
       const el = document.getElementById('ghStatus');
-      const ok = !!(c.owner && c.repo && c.token);
-      el.innerHTML = ok
-        ? `<span class="gh-dot ok"></span>GitHub ready`
-        : `<span class="gh-dot"></span>GitHub not configured`;
+      // Local sync is always 'ready' as long as we can talk to the backend.
+      // We don't need browser-tokens anymore as our backend handles git auth.
+      el.innerHTML = `<span class="gh-dot ok"></span>Cloud Sync Ready`;
       el.className = 'gh-status';
     }
 
@@ -1971,74 +1970,45 @@
     }
 
     async function syncToGitHub() {
-      const cfg = getGHConfig();
-      if (!cfg.owner || !cfg.repo || !cfg.token) {
-        openGHSettings();
-        toast('Configure GitHub settings first', true);
-        return;
-      }
-
       const btn = document.getElementById('ghSyncBtn');
       const status = document.getElementById('ghStatus');
+      
       btn.disabled = true;
-      btn.textContent = '⏳ Saving…';
+      btn.textContent = '⏳ Cloud Syncing…';
       status.className = 'gh-status saving';
-      status.innerHTML = '<span class="gh-dot" style="background:var(--warn)"></span>Saving…';
-
-      const apiBase = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`;
-      // Token never logged — only used in Authorization header
-      const headers = {
-        'Authorization': `token ${cfg.token}`,
-        'Accept': 'application/vnd.github+json',
-        'Content-Type': 'application/json',
-      };
+      status.innerHTML = '<span class="gh-dot" style="background:var(--warn)"></span>Syncing to Cloud…';
 
       try {
-        // Step 1: GET existing file to obtain SHA (required by GitHub API for updates)
-        let sha = null;
-        const getRes = await fetch(`${apiBase}?ref=${cfg.branch}`, { headers });
-        if (getRes.ok) {
-          const fileData = await getRes.json();
-          sha = fileData.sha || null;
-        } else if (getRes.status !== 404) {
-          // 404 = new file (no SHA needed); anything else = real error
-          const err = await getRes.json().catch(() => ({}));
-          throw new Error(`GitHub GET failed: ${err.message || getRes.status}`);
-        }
-
-        // Step 2: Base64-encode current JSON
-        const jsonStr = getJSON();
-        const b64 = btoa(unescape(encodeURIComponent(jsonStr))); // handles UTF-8/Hindi chars
-
-        // Step 3: PUT to create/update the file
-        const body = {
-          message: `update ${cfg.path} via PrepMantra Admin`,
-          content: b64,
-          branch: cfg.branch,
-        };
-        if (sha) body.sha = sha;
-
-        const putRes = await fetch(apiBase, {
-          method: 'PUT',
-          headers,
-          body: JSON.stringify(body),
+        // We now talk to our LOCAL backend which handles the GIT PUSH automatically.
+        // No tokens needed in browser!
+        const res = await fetch(`${BASE_URL}/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
         });
 
-        if (!putRes.ok) {
-          const err = await putRes.json().catch(() => ({}));
-          throw new Error(err.message || `GitHub PUT failed (${putRes.status})`);
+        if (!res.ok) {
+           const err = await res.json().catch(() => ({}));
+           throw new Error(err.error || `Server sync failed (${res.status})`);
         }
 
-        // Success
-        status.className = 'gh-status saved';
-        status.innerHTML = '<span class="gh-dot ok"></span>Saved to GitHub ✓';
-        toast('data.json saved to GitHub ✓');
-        setTimeout(() => updateGHDot(), 4000);
+        const result = await res.json();
+        if (result.gitError) {
+           toast('Saved locally, but Cloud sync failed. Check your local Git status.', true);
+           status.className = 'gh-status err';
+           status.innerHTML = '<span class="gh-dot err"></span>Sync Failed';
+        } else {
+           status.className = 'gh-status saved';
+           status.innerHTML = '<span class="gh-dot ok"></span>Cloud Sync Successful';
+           toast('Everything is synced to GitHub ✓');
+           setTimeout(() => updateGHDot(), 4000);
+        }
 
       } catch (err) {
         status.className = 'gh-status err';
-        status.innerHTML = `<span class="gh-dot err"></span>${err.message}`;
-        toast(err.message, true);
+        status.innerHTML = `<span class="gh-dot err"></span>Error: ${err.message}`;
+        toast('Sync failed: ' + err.message, true);
+        console.error('Save error:', err);
       }
 
       btn.disabled = false;

@@ -14,6 +14,10 @@ const { Readable, PassThrough } = require('stream');
 // Point fluent-ffmpeg to the bundled binary — no manual ffmpeg install needed
 ffmpeg.setFfmpegPath(ffmpegPath);
 
+const fs = require('fs');
+const path = require('path');
+const { exec } = require('child_process');
+
 // ─── Config ────────────────────────────────────────────────────────────────────
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
@@ -233,6 +237,58 @@ app.post('/upload', upload.single('audio'), async (req, res) => {
     const message = err.response?.data?.description || err.message;
     console.error(`[upload] Error: ${message}`);
     return res.status(500).json({ error: `Upload failed: ${message}` });
+  }
+});
+
+// ─── POST /save ────────────────────────────────────────────────────────────────
+// Receives the full data.json object, saves to disk, and pushes to GitHub.
+// This is the "Professional Auto-Sync" logic.
+app.post('/save', async (req, res) => {
+  const data = req.body;
+  
+  if (!data || !Array.isArray(data.categories)) {
+    return res.status(400).json({ error: 'Invalid data format.' });
+  }
+
+  // Path to data.json in the project root
+  const dataPath = path.join(__dirname, '..', 'data.json');
+
+  try {
+    // 1. Save to local disk
+    fs.writeFileSync(dataPath, JSON.stringify(data, null, 2), 'utf8');
+    console.log(`[save] ✓ data.json updated locally.`);
+
+    // 2. Perform Git Push (Auto-sync)
+    const commitMsg = `update data.json via Admin Panel (${new Date().toLocaleString()})`;
+    
+    // Commands are run sequentially
+    const gitCmd = `git add "${dataPath}" && git commit -m "${commitMsg}" && git push origin master:main && git push origin master:master`;
+    
+    console.log(`[sync] Starting GitHub push...`);
+    
+    exec(gitCmd, { cwd: path.join(__dirname, '..') }, (err, stdout, stderr) => {
+      if (err) {
+        console.error(`[sync] Git Error: ${err.message}`);
+        // We still consider the save "successful" locally, but notify about the push error
+        return res.json({ 
+          success: true, 
+          message: 'Saved locally, but GitHub sync failed.',
+          gitError: err.message 
+        });
+      }
+      
+      console.log(`[sync] ✓ GitHub Push Success.`);
+      console.log(stdout);
+      
+      return res.json({ 
+        success: true, 
+        message: 'Saved to disk and synced to GitHub ✓' 
+      });
+    });
+
+  } catch (err) {
+    console.error(`[save] Error: ${err.message}`);
+    return res.status(500).json({ error: `Save failed: ${err.message}` });
   }
 });
 
