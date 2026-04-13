@@ -1,3 +1,19 @@
 {
-  "categories": []
+  "categories": [
+    {
+      "id": "bpcc_106",
+      "name": "BPCC 106",
+      "description": "",
+      "episodes": [
+        {
+          "id": "bpcc_106_1_मनोविज्ञान_के_विकास_",
+          "title": "मनोविज्ञान के विकास में ब्रिटिश अनुभववाद",
+          "description": "",
+          "audio_url": "http://prepmantra-data.onrender.com/stream/CQACAgUAAyEGAATt1pZBAAMTadyR9tOSRB3pBRZ0EepA0e0K8IUAAj0cAAJ8LOhW1mjkQij308s7BA",
+          "duration": 753,
+          "order": 1
+        }
+      ]
+    }
+  ]
 }
