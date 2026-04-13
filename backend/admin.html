@@ -1,734 +1,1992 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PrepMantra – Admin Panel</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>PrepMantra Admin</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
 
     :root {
-      --bg:         #0f0f1e;
-      --surface:    #1a1a2e;
-      --surface2:   #252540;
-      --border:     #2a2a45;
-      --primary:    #4F8EF7;
-      --accent:     #7C5CFC;
-      --text:       #e8e8f0;
-      --muted:      #8888a8;
-      --danger:     #CF6679;
-      --success:    #4CAF50;
-      --warn:       #f0a040;
+      --bg: #0d0d1a;
+      --surface: #161626;
+      --s2: #1e1e35;
+      --s3: #252545;
+      --border: #2a2a45;
+      --primary: #4F8EF7;
+      --accent: #7C5CFC;
+      --text: #e8e8f0;
+      --muted: #7878a0;
+      --danger: #e05070;
+      --success: #3fc87a;
+      --warn: #f0a040;
     }
 
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-           background: var(--bg); color: var(--text); min-height: 100vh; }
-
-    /* ── Header ──────────────────────────────────────────────── */
-    header {
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      padding: 14px 24px; display: flex; align-items: center; gap: 12px;
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
     }
-    header h1 { font-size: 18px; font-weight: 700; color: var(--primary); }
-    header span { font-size: 13px; color: var(--muted); }
-    .header-right { margin-left: auto; display: flex; gap: 10px; }
 
-    /* ── Layout ──────────────────────────────────────────────── */
-    .layout { display: grid; grid-template-columns: 300px 1fr; height: calc(100vh - 53px); }
-
-    /* ── Sidebar ─────────────────────────────────────────────── */
-    .sidebar { background: var(--surface); border-right: 1px solid var(--border);
-               display: flex; flex-direction: column; overflow: hidden; }
-    .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border);
-                      display: flex; align-items: center; justify-content: space-between; }
-    .sidebar-header h2 { font-size: 13px; font-weight: 700; color: var(--muted);
-                         text-transform: uppercase; letter-spacing: 1px; }
-    .sidebar-list { flex: 1; overflow-y: auto; padding: 8px; }
-
-    .category-item {
-      padding: 12px 14px; border-radius: 10px; cursor: pointer;
-      display: flex; align-items: center; gap: 10px;
-      margin-bottom: 4px; border: 1px solid transparent; transition: all 0.15s;
+    /* ── Topbar ──────────────────────────────── */
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 16px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0
     }
-    .category-item:hover { background: var(--surface2); }
-    .category-item.active { background: rgba(79,142,247,0.12); border-color: rgba(79,142,247,0.3); }
-    .category-item .cat-icon { width: 34px; height: 34px; border-radius: 8px;
-      background: rgba(124,92,252,0.15); display: flex; align-items: center;
-      justify-content: center; font-size: 16px; flex-shrink: 0; }
-    .category-item .cat-info { flex: 1; min-width: 0; }
-    .category-item .cat-name { font-size: 14px; font-weight: 600; white-space: nowrap;
-      overflow: hidden; text-overflow: ellipsis; }
-    .category-item .cat-count { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .category-item .del-btn { opacity: 0; background: none; border: none; cursor: pointer;
-      color: var(--danger); padding: 4px; border-radius: 4px; font-size: 16px;
-      line-height: 1; flex-shrink: 0; transition: opacity 0.15s; }
-    .category-item:hover .del-btn { opacity: 1; }
 
-    /* ── Main Panel ──────────────────────────────────────────── */
-    .main { display: flex; flex-direction: column; overflow: hidden; }
-
-    .main-header { padding: 16px 20px; border-bottom: 1px solid var(--border);
-                   display: flex; align-items: center; justify-content: space-between;
-                   background: var(--surface); flex-shrink: 0; }
-    .main-header h2 { font-size: 16px; font-weight: 700; }
-    .main-header span { font-size: 13px; color: var(--muted); }
-
-    .episode-list { flex: 1; overflow-y: auto; padding: 16px; }
-
-    .episode-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 12px; padding: 14px 16px; margin-bottom: 10px;
-      display: flex; gap: 14px; align-items: flex-start;
+    .topbar h1 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--primary)
     }
-    .ep-order { width: 28px; height: 28px; border-radius: 7px;
-      background: rgba(79,142,247,0.15); color: var(--primary);
-      font-size: 12px; font-weight: 700; display: flex; align-items: center;
-      justify-content: center; flex-shrink: 0; margin-top: 2px; }
-    .ep-info { flex: 1; min-width: 0; }
-    .ep-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-    .ep-meta  { font-size: 12px; color: var(--muted); display: flex; gap: 12px; }
-    .ep-url   { font-size: 11px; color: var(--primary); margin-top: 6px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 400px; }
-    .ep-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
-    /* ── Empty State ─────────────────────────────────────────── */
-    .empty { display: flex; flex-direction: column; align-items: center;
-             justify-content: center; flex: 1; gap: 12px; color: var(--muted); }
-    .empty-icon { font-size: 48px; }
-    .empty p { font-size: 14px; }
+    .topbar .sub {
+      font-size: 12px;
+      color: var(--muted)
+    }
 
-    /* ── Buttons ─────────────────────────────────────────────── */
-    .btn { display: inline-flex; align-items: center; gap: 6px; border: none;
-           border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
-           padding: 8px 14px; transition: opacity 0.15s; }
-    .btn:hover:not(:disabled) { opacity: 0.85; }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-primary  { background: var(--primary); color: #fff; }
-    .btn-accent   { background: var(--accent); color: #fff; }
-    .btn-ghost    { background: var(--surface2); color: var(--text); }
-    .btn-danger   { background: transparent; color: var(--danger); padding: 4px 8px; }
-    .btn-sm       { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
-    .btn-success  { background: var(--success); color: #fff; }
+    .topbar .spacer {
+      flex: 1
+    }
 
-    /* ── Modal ───────────────────────────────────────────────── */
-    .overlay { display: none; position: fixed; inset: 0;
-               background: rgba(0,0,0,0.6); z-index: 100;
-               align-items: center; justify-content: center; }
-    .overlay.open { display: flex; }
-    .modal { background: var(--surface); border: 1px solid var(--border);
-             border-radius: 16px; padding: 24px; width: 480px; max-width: 95vw;
-             max-height: 90vh; overflow-y: auto; }
-    .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+    .badge {
+      background: var(--s3);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11px;
+      color: var(--muted)
+    }
 
-    /* ── Form ────────────────────────────────────────────────── */
-    .field { margin-bottom: 16px; }
-    .field label { display: block; font-size: 12px; font-weight: 600;
-                   color: var(--muted); text-transform: uppercase;
-                   letter-spacing: 0.8px; margin-bottom: 6px; }
-    .field input, .field textarea, .field select {
-      width: 100%; background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 8px; color: var(--text); font-size: 14px;
-      padding: 10px 12px; outline: none; transition: border-color 0.15s;
+    .url-config {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 4px 10px
+    }
+
+    .url-config input {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: 11px;
       font-family: inherit;
-    }
-    .field input:focus, .field textarea:focus, .field select:focus {
-      border-color: var(--primary);
-    }
-    .field textarea { resize: vertical; min-height: 70px; }
-    .field input[type="file"] { padding: 8px; cursor: pointer; }
-
-    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-    .upload-status { font-size: 12px; margin-top: 6px; padding: 8px 12px;
-                     border-radius: 6px; background: var(--surface2); }
-    .upload-status.uploading { color: var(--warn); }
-    .upload-status.done      { color: var(--success); }
-    .upload-status.error     { color: var(--danger); }
-
-    /* ── JSON Output ─────────────────────────────────────────── */
-    .json-section { border-top: 1px solid var(--border); background: var(--surface);
-                    padding: 16px 20px; flex-shrink: 0; }
-    .json-header { display: flex; align-items: center; justify-content: space-between;
-                   margin-bottom: 10px; }
-    .json-header h3 { font-size: 13px; font-weight: 700; color: var(--muted);
-                      text-transform: uppercase; letter-spacing: 1px; }
-    .json-output { background: var(--surface2); border: 1px solid var(--border);
-                   border-radius: 8px; padding: 12px; font-family: 'Courier New', monospace;
-                   font-size: 11px; color: #a0d0a0; line-height: 1.5;
-                   max-height: 200px; overflow-y: auto; white-space: pre; }
-
-    /* ── Scrollbar ───────────────────────────────────────────── */
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  </style>
-</head>
-<body>
-
-<!-- ── Header ──────────────────────────────────────────────────────────────── -->
-<header>
-  <span style="font-size:20px">🎧</span>
-  <h1>PrepMantra</h1>
-  <span>Admin Panel</span>
-  <div class="header-right">
-    <button class="btn btn-ghost btn-sm" onclick="generateJSON()">Generate JSON</button>
-    <button class="btn btn-success btn-sm" onclick="downloadJSON()">⬇ Download data.json</button>
-  </div>
-</header>
-
-<!-- ── Layout ──────────────────────────────────────────────────────────────── -->
-<div class="layout">
-
-  <!-- Sidebar: Categories -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <h2>Categories</h2>
-      <button class="btn btn-primary btn-sm" onclick="openAddCategory()">+ Add</button>
-    </div>
-    <div class="sidebar-list" id="categoryList">
-      <!-- rendered by JS -->
-    </div>
-  </aside>
-
-  <!-- Main: Episodes -->
-  <main class="main">
-    <div class="main-header">
-      <div>
-        <h2 id="selectedCatName">Select a category</h2>
-        <span id="selectedCatId" style="color: var(--muted); font-size: 12px;"></span>
-      </div>
-      <button class="btn btn-accent btn-sm" id="addEpBtn" onclick="openAddEpisode()" disabled>+ Add Episode</button>
-    </div>
-
-    <div class="episode-list" id="episodeList">
-      <div class="empty">
-        <div class="empty-icon">📂</div>
-        <p>Select a category from the left panel</p>
-      </div>
-    </div>
-
-    <!-- JSON Output -->
-    <div class="json-section">
-      <div class="json-header">
-        <h3>data.json output</h3>
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-ghost btn-sm" onclick="copyJSON()">Copy JSON</button>
-          <button class="btn btn-ghost btn-sm" onclick="generateJSON()">Refresh</button>
-        </div>
-      </div>
-      <div class="json-output" id="jsonOutput">Click "Generate JSON" to preview the output.</div>
-    </div>
-  </main>
-</div>
-
-<!-- ── Add Category Modal ──────────────────────────────────────────────────── -->
-<div class="overlay" id="catModal">
-  <div class="modal">
-    <h3>Add Category</h3>
-    <div class="field">
-      <label>Category ID <span style="color:var(--muted);font-weight:400;text-transform:none;">(slug, no spaces, e.g. "history")</span></label>
-      <input type="text" id="catId" placeholder="history" oninput="sanitizeId('catId')" />
-    </div>
-    <div class="field">
-      <label>Category Name</label>
-      <input type="text" id="catName" placeholder="History" oninput="autoId()" list="catSuggestions" autocomplete="off" />
-      <datalist id="catSuggestions"></datalist>
-      <div id="catDupWarn" style="display:none;font-size:12px;color:var(--warn);margin-top:6px;">⚠ This category already exists — click it in the sidebar instead.</div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeCatModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="addCategory()">Add Category</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── Add Episode Modal ───────────────────────────────────────────────────── -->
-<div class="overlay" id="epModal">
-  <div class="modal">
-    <h3>Add Episode</h3>
-    <div class="field">
-      <label>Episode ID <span style="color:var(--muted);font-weight:400;text-transform:none;">(e.g. "hist_1")</span></label>
-      <input type="text" id="epId" placeholder="hist_1" oninput="sanitizeId('epId')" />
-    </div>
-    <div class="field">
-      <label>Title</label>
-      <input type="text" id="epTitle" placeholder="Vedic Period" />
-    </div>
-    <div class="field">
-      <label>Description</label>
-      <textarea id="epDesc" placeholder="Brief description of this episode..."></textarea>
-    </div>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-      <div class="field">
-        <label>Duration (seconds)</label>
-        <input type="number" id="epDuration" placeholder="480" min="1" />
-      </div>
-      <div class="field">
-        <label>Order</label>
-        <input type="number" id="epOrder" placeholder="1" min="1" />
-      </div>
-    </div>
-    <div class="field">
-      <label>Audio File (upload to Telegram)</label>
-      <input type="file" id="epAudioFile" accept="audio/*" onchange="onFileSelected()" />
-      <div class="upload-status" id="uploadStatus" style="display:none;"></div>
-    </div>
-    <div class="field">
-      <label>Audio URL <span style="color:var(--muted);font-weight:400;text-transform:none;">(auto-filled after upload, or paste manually)</span></label>
-      <input type="text" id="epAudioUrl" placeholder="http://localhost:3000/stream/..." />
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeEpModal()">Cancel</button>
-      <button class="btn btn-accent" id="uploadBtn" onclick="uploadAndFill()" style="display:none">Upload Audio</button>
-      <button class="btn btn-primary" onclick="addEpisode()">Save Episode</button>
-    </div>
-  </div>
-</div>
-
-<script>
-  // ── State ─────────────────────────────────────────────────────────────────────
-  const BACKEND = 'http://localhost:3000';
-  const LS_KEY  = 'prepmantra_admin_data';
-
-  let state = {
-    categories: []
-  };
-
-  let selectedCatIndex = null;
-
-  // ── Persistence: load from localStorage ───────────────────────────────────────
-  function loadState() {
-    try {
-      const saved = localStorage.getItem(LS_KEY);
-      if (saved) state = JSON.parse(saved);
-    } catch (e) { /* ignore */ }
-  }
-
-  function saveState() {
-    localStorage.setItem(LS_KEY, JSON.stringify(state));
-  }
-
-  // ── Helper: generate slug from text ───────────────────────────────────────────
-  function slugify(text) {
-    return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-  }
-
-  function sanitizeId(inputId) {
-    const el = document.getElementById(inputId);
-    el.value = slugify(el.value.replace(/\s/g, '_'));
-  }
-
-  function autoId() {
-    const nameEl  = document.getElementById('catName');
-    const warnEl  = document.getElementById('catDupWarn');
-    const name    = nameEl.value;
-    const newId   = slugify(name);
-    document.getElementById('catId').value = newId;
-
-    // Warn if this category already exists
-    const dup = state.categories.find(c =>
-      c.id === newId || c.name.toLowerCase() === name.toLowerCase()
-    );
-    warnEl.style.display = dup ? 'block' : 'none';
-  }
-
-  // ── Update datalist with existing category names ───────────────────────────────
-  function updateCatDatalist() {
-    const dl = document.getElementById('catSuggestions');
-    dl.innerHTML = state.categories
-      .map(c => `<option value="${c.name}">ID: ${c.id}</option>`)
-      .join('');
-  }
-
-  // ── Render Categories ──────────────────────────────────────────────────────────
-  function renderCategories() {
-    const list = document.getElementById('categoryList');
-    list.innerHTML = '';
-
-    if (state.categories.length === 0) {
-      list.innerHTML = `<div style="padding:24px 16px; text-align:center; color:var(--muted); font-size:13px;">
-        No categories yet.<br>Click "+ Add" to create one.
-      </div>`;
-      return;
+      width: 220px;
+      outline: none
     }
 
-    state.categories.forEach((cat, i) => {
-      const div = document.createElement('div');
-      div.className = 'category-item' + (selectedCatIndex === i ? ' active' : '');
-      div.innerHTML = `
-        <div class="cat-icon">📁</div>
-        <div class="cat-info">
-          <div class="cat-name">${cat.name}</div>
-          <div class="cat-count">${cat.episodes.length} episode${cat.episodes.length !== 1 ? 's' : ''} · #${cat.id}</div>
-        </div>
-        <button class="del-btn" title="Delete category" onclick="deleteCategory(event, ${i})">✕</button>
-      `;
-      div.addEventListener('click', () => selectCategory(i));
-      list.appendChild(div);
-    });
-  }
-
-  // ── Render Episodes ────────────────────────────────────────────────────────────
-  function renderEpisodes() {
-    const list = document.getElementById('episodeList');
-
-    if (selectedCatIndex === null) {
-      list.innerHTML = `<div class="empty">
-        <div class="empty-icon">📂</div>
-        <p>Select a category from the left panel</p>
-      </div>`;
-      return;
+    .url-config input:focus {
+      color: var(--text)
     }
 
-    const cat = state.categories[selectedCatIndex];
-    document.getElementById('selectedCatName').textContent = cat.name;
-    document.getElementById('selectedCatId').textContent   = `ID: ${cat.id}`;
-    document.getElementById('addEpBtn').disabled = false;
-
-    if (cat.episodes.length === 0) {
-      list.innerHTML = `<div class="empty">
-        <div class="empty-icon">🎵</div>
-        <p>No episodes yet. Click "+ Add Episode" to add one.</p>
-      </div>`;
-      return;
+    /* ── Layout ──────────────────────────────── */
+    .layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 270px 1fr;
+      overflow: hidden
     }
 
-    const sorted = [...cat.episodes].sort((a, b) => a.order - b.order);
-
-    list.innerHTML = sorted.map(ep => `
-      <div class="episode-card">
-        <div class="ep-order">${ep.order}</div>
-        <div class="ep-info">
-          <div class="ep-title">${ep.title}</div>
-          <div class="ep-meta">
-            <span>🕐 ${Math.floor(ep.duration / 60)}m ${ep.duration % 60}s</span>
-            <span style="color:var(--muted)">ID: ${ep.id}</span>
-          </div>
-          <div class="ep-url" title="${ep.audio_url || 'No audio URL'}">${ep.audio_url || '⚠ No audio URL'}</div>
-        </div>
-        <div class="ep-actions">
-          <button class="btn btn-danger btn-sm" onclick="deleteEpisode('${ep.id}')">✕</button>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  function render() {
-    renderCategories();
-    renderEpisodes();
-    updateCatDatalist();
-    generateJSON();
-  }
-
-  // ── Select Category ────────────────────────────────────────────────────────────
-  function selectCategory(index) {
-    selectedCatIndex = index;
-    render();
-    document.getElementById('episodeList').scrollTop = 0;
-  }
-
-  // ── Add / Delete Category ──────────────────────────────────────────────────────
-  function openAddCategory() {
-    document.getElementById('catId').value   = '';
-    document.getElementById('catName').value = '';
-    document.getElementById('catDupWarn').style.display = 'none';
-    document.getElementById('catModal').classList.add('open');
-    setTimeout(() => document.getElementById('catName').focus(), 50);
-  }
-
-  function closeCatModal() {
-    document.getElementById('catModal').classList.remove('open');
-  }
-
-  function addCategory() {
-    const id   = document.getElementById('catId').value.trim();
-    const name = document.getElementById('catName').value.trim();
-
-    if (!id || !name) { alert('ID and Name are required.'); return; }
-
-    // Block duplicate id OR name
-    if (state.categories.find(c => c.id === id)) {
-      alert(`A category with ID "${id}" already exists. Click it in the sidebar.`);
-      return;
-    }
-    if (state.categories.find(c => c.name.toLowerCase() === name.toLowerCase())) {
-      alert(`A category named "${name}" already exists. Click it in the sidebar.`);
-      return;
+    /* ── Panel ───────────────────────────────── */
+    .panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
     }
 
-    state.categories.push({ id, name, episodes: [] });
-    saveState();
-    closeCatModal();
-    selectedCatIndex = state.categories.length - 1;
-    render();
-  }
-
-  function deleteCategory(e, index) {
-    e.stopPropagation();
-    const cat = state.categories[index];
-    if (!confirm(`Delete category "${cat.name}" and all its episodes?`)) return;
-    state.categories.splice(index, 1);
-    if (selectedCatIndex === index) selectedCatIndex = null;
-    else if (selectedCatIndex > index) selectedCatIndex--;
-    saveState();
-    render();
-  }
-
-  // ── Add / Delete Episode ───────────────────────────────────────────────────────
-  function openAddEpisode() {
-    if (selectedCatIndex === null) return;
-    // Auto-fill order with next number
-    const cat = state.categories[selectedCatIndex];
-    const nextOrder = cat.episodes.length + 1;
-
-    document.getElementById('epId').value       = '';
-    document.getElementById('epTitle').value    = '';
-    document.getElementById('epDesc').value     = '';
-    document.getElementById('epDuration').value = '';
-    document.getElementById('epOrder').value    = nextOrder;
-    document.getElementById('epAudioUrl').value = '';
-    document.getElementById('epAudioFile').value = '';
-    document.getElementById('uploadStatus').style.display = 'none';
-    document.getElementById('uploadBtn').style.display    = 'none';
-
-    document.getElementById('epModal').classList.add('open');
-    setTimeout(() => document.getElementById('epTitle').focus(), 50);
-  }
-
-  function closeEpModal() {
-    document.getElementById('epModal').classList.remove('open');
-  }
-
-  // ── Filename parser: extract episode number + clean title ────────────────────
-  // Handles: "Episode-2-Vividhta-humein-kaise.mp3"
-  //          "Episode_3_भारत_की_संस्कृति.m4a"
-  //          "03 - Some Title.mp3"
-  //          "Some Title.mp3"  (no number → returns null for order)
-  function parseFilename(filename) {
-    // Remove extension
-    const base = filename.replace(/\.[^.]+$/, '');
-
-    // Pattern A: Episode-{N}-{title}  or  Episode_{N}_{title}
-    const matchA = base.match(/^[Ee]pisode[-_ ](\d+)[-_ ]+(.+)$/);
-    if (matchA) {
-      return {
-        order: parseInt(matchA[1]),
-        title: matchA[2].replace(/[-_]+/g, ' ').trim(),
-      };
+    .panel-head {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      background: var(--surface)
     }
 
-    // Pattern B: {N} - {title}  or  {N}. {title}
-    const matchB = base.match(/^(\d{1,3})[\-\.\s]+(.+)$/);
-    if (matchB) {
-      return {
-        order: parseInt(matchB[1]),
-        title: matchB[2].replace(/[-_]+/g, ' ').trim(),
-      };
+    .panel-head h2 {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      flex: 1
     }
 
-    // Pattern C: {title}_{N}  (title first, number at end)
-    const matchC = base.match(/^(.+?)[-_ ]+(\d{1,3})$/);
-    if (matchC) {
-      return {
-        order: parseInt(matchC[2]),
-        title: matchC[1].replace(/[-_]+/g, ' ').trim(),
-      };
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px
     }
 
-    // No number found — use full name as title
-    return { order: null, title: base.replace(/[-_]+/g, ' ').trim() };
-  }
-
-  // ── Get real audio duration from file (no upload needed) ──────────────────────
-  function getAudioDuration(file) {
-    return new Promise((resolve) => {
-      const audio = document.createElement('audio');
-      const url   = URL.createObjectURL(file);
-      audio.preload = 'metadata';
-      audio.addEventListener('loadedmetadata', () => {
-        URL.revokeObjectURL(url);
-        const dur = Math.round(audio.duration);
-        resolve(isFinite(dur) && dur > 0 ? dur : null);
-      });
-      audio.addEventListener('error', () => { URL.revokeObjectURL(url); resolve(null); });
-      audio.src = url;
-    });
-  }
-
-  async function onFileSelected() {
-    const file = document.getElementById('epAudioFile').files[0];
-    if (!file) return;
-
-    const mb     = (file.size / (1024 * 1024)).toFixed(1);
-    const status = document.getElementById('uploadStatus');
-    status.style.display = 'block';
-    status.className = 'upload-status uploading';
-    status.textContent = `📂 ${file.name} · ${mb}MB — reading file...`;
-
-    // 1. Parse filename → auto-fill title, order, ID
-    const parsed = parseFilename(file.name);
-    if (parsed.title && !document.getElementById('epTitle').value) {
-      document.getElementById('epTitle').value = parsed.title;
-    }
-    if (parsed.order && !document.getElementById('epOrder').value) {
-      document.getElementById('epOrder').value = parsed.order;
+    /* ── Search ──────────────────────────────── */
+    .search-wrap {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--surface)
     }
 
-    // Auto-generate episode ID
-    if (!document.getElementById('epId').value && selectedCatIndex !== null) {
-      const catId  = state.categories[selectedCatIndex].id;
-      const order  = parsed.order || (state.categories[selectedCatIndex].episodes.length + 1);
-      const slug   = slugify(parsed.title).slice(0, 20);
-      document.getElementById('epId').value = `${catId}_${order}_${slug}`;
+    .search-wrap input {
+      width: 100%;
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 12px;
+      padding: 7px 10px;
+      outline: none;
+      font-family: inherit
     }
 
-    // 2. Auto-detect real duration from audio metadata
-    const dur = await getAudioDuration(file);
-    if (dur !== null && !document.getElementById('epDuration').value) {
-      document.getElementById('epDuration').value = dur;
-      const mins = Math.floor(dur / 60);
-      const secs = dur % 60;
-      status.className = 'upload-status done';
-      status.textContent = `${file.size > 20*1024*1024 ? '⚠ Large file — will be auto-compressed · ' : '✅ '}`
-        + `${mb}MB · Duration detected: ${mins}m ${secs}s`;
-    } else {
-      status.className = 'upload-status' + (file.size > 20*1024*1024 ? ' uploading' : ' done');
-      status.textContent = file.size > 20 * 1024 * 1024
-        ? `⚠ ${mb}MB — will be auto-compressed by server · enter duration manually`
-        : `✅ ${mb}MB · enter duration if not detected`;
+    .search-wrap input:focus {
+      border-color: var(--primary)
     }
 
-    document.getElementById('uploadBtn').style.display = 'inline-flex';
-  }
+    .search-wrap input::placeholder {
+      color: var(--muted)
+    }
 
-  async function uploadAndFill() {
-    const fileInput = document.getElementById('epAudioFile');
-    const file = fileInput.files[0];
-    if (!file) { alert('Select a file first.'); return; }
+    /* ── Courses ─────────────────────────────── */
+    .courses-panel {
+      background: var(--surface);
+      border-right: 1px solid var(--border)
+    }
 
-    const btn    = document.getElementById('uploadBtn');
-    const status = document.getElementById('uploadStatus');
-    const mb     = (file.size / (1024 * 1024)).toFixed(1);
+    .course-card {
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 5px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      transition: all .15s;
+      background: var(--s2)
+    }
 
-    btn.disabled = true;
-    btn.textContent = 'Uploading...';
-    status.style.display = 'block';
-    status.className = 'upload-status uploading';
-    status.textContent = `Uploading ${file.name} (${mb}MB)... ${file.size > 20 * 1024 * 1024 ? 'compressing first, please wait...' : ''}`;
+    .course-card:hover {
+      border-color: var(--border)
+    }
 
-    const formData = new FormData();
-    formData.append('audio', file);
+    .course-card.active {
+      background: rgba(79, 142, 247, .1);
+      border-color: rgba(79, 142, 247, .4)
+    }
 
-    try {
-      const res  = await fetch(`${BACKEND}/upload`, { method: 'POST', body: formData });
-      const data = await res.json();
+    .course-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: rgba(124, 92, 252, .15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0
+    }
 
-      if (!res.ok || !data.success) throw new Error(data.error || 'Upload failed');
+    .course-info {
+      flex: 1;
+      min-width: 0
+    }
 
-      // Fill in the audio URL automatically
-      document.getElementById('epAudioUrl').value = data.stream_url;
+    .course-name {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
 
-      // Auto-fill episode ID from title if empty
-      if (!document.getElementById('epId').value) {
-        const title = document.getElementById('epTitle').value;
-        const catId = state.categories[selectedCatIndex].id;
-        const epNum = state.categories[selectedCatIndex].episodes.length + 1;
-        document.getElementById('epId').value = title
-          ? `${catId}_${epNum}_${slugify(title).slice(0, 15)}`
-          : `${catId}_${epNum}`;
+    .course-meta {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity .15s
+    }
+
+    .course-card:hover .card-actions {
+      opacity: 1
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      transition: all .15s
+    }
+
+    .icon-btn:hover.edit {
+      color: var(--primary);
+      background: rgba(79, 142, 247, .1)
+    }
+
+    .icon-btn:hover.del {
+      color: var(--danger);
+      background: rgba(224, 80, 112, .1)
+    }
+
+    /* ── Episodes ────────────────────────────── */
+    .episodes-panel {
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    .ep-head-info h2 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      text-transform: none;
+      letter-spacing: 0
+    }
+
+    .ep-head-info small {
+      font-size: 10px;
+      color: var(--muted)
+    }
+
+    .ep-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0
+    }
+
+    .ep-table {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    .ep-table thead th {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 1
+    }
+
+    .ep-table tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background .1s
+    }
+
+    .ep-table tbody tr:hover {
+      background: var(--s2)
+    }
+
+    .ep-table td {
+      padding: 10px 10px;
+      font-size: 12px;
+      vertical-align: middle
+    }
+
+    .ord-cell {
+      display: flex;
+      align-items: center;
+      gap: 4px
+    }
+
+    .ep-num {
+      width: 30px;
+      height: 30px;
+      border-radius: 7px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(79, 142, 247, .12);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0
+    }
+
+    .ord-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 1px
+    }
+
+    .ord-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 10px;
+      padding: 1px 3px;
+      line-height: 1;
+      border-radius: 3px;
+      transition: all .12s
+    }
+
+    .ord-btn:hover {
+      color: var(--text);
+      background: var(--s3)
+    }
+
+    .ep-title-cell .ep-title {
+      font-weight: 600;
+      color: var(--text);
+      font-size: 13px
+    }
+
+    .ep-title-cell .ep-desc {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+      max-width: 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .status-ok {
+      color: var(--success);
+      font-size: 12px;
+      font-weight: 600
+    }
+
+    .status-warn {
+      color: var(--warn);
+      font-size: 12px
+    }
+
+    .ep-url-small {
+      font-size: 10px;
+      color: var(--primary);
+      max-width: 140px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 5px;
+      justify-content: flex-end
+    }
+
+    .play-btn {
+      background: rgba(63, 200, 122, .1);
+      color: var(--success);
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 700;
+      transition: all .15s
+    }
+
+    .play-btn:hover {
+      background: rgba(63, 200, 122, .22)
+    }
+
+    .play-btn.playing {
+      background: rgba(63, 200, 122, .25);
+      animation: pulse 1.2s infinite
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
       }
 
-      status.className = 'upload-status done';
-      status.textContent = data.was_compressed
-        ? `✅ Compressed ${data.original_mb}MB → ${data.compressed_mb}MB · Uploaded to Telegram`
-        : `✅ Uploaded to Telegram (${data.original_mb}MB)`;
-
-    } catch (err) {
-      status.className = 'upload-status error';
-      status.textContent = `❌ Upload failed: ${err.message}`;
+      50% {
+        opacity: .65
+      }
     }
 
-    btn.disabled = false;
-    btn.textContent = 'Upload Audio';
-  }
+    /* ── Audio Player Bar ────────────────────── */
+    .player-bar {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 10px 16px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0
+    }
 
-  function addEpisode() {
-    const id       = document.getElementById('epId').value.trim();
-    const title    = document.getElementById('epTitle').value.trim();
-    const desc     = document.getElementById('epDesc').value.trim();
-    const duration = parseInt(document.getElementById('epDuration').value, 10);
-    const order    = parseInt(document.getElementById('epOrder').value, 10);
-    const audioUrl = document.getElementById('epAudioUrl').value.trim();
+    .player-bar.show {
+      display: flex
+    }
 
-    if (!id)       { alert('Episode ID is required.'); return; }
-    if (!title)    { alert('Title is required.'); return; }
-    if (!duration) { alert('Duration is required (in seconds).'); return; }
-    if (!order)    { alert('Order is required.'); return; }
+    .player-title {
+      font-size: 12px;
+      font-weight: 600;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 260px
+    }
 
-    const cat = state.categories[selectedCatIndex];
-    if (cat.episodes.find(e => e.id === id)) { alert(`Episode ID "${id}" already exists in this category.`); return; }
+    .player-bar audio {
+      flex: 1;
+      height: 32px;
+      min-width: 0
+    }
 
-    cat.episodes.push({
-      id,
-      title,
-      description: desc,
-      audio_url:   audioUrl,
-      duration,
-      order,
+    audio::-webkit-media-controls-panel {
+      background: var(--s2)
+    }
+
+    .player-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 18px;
+      padding: 2px 6px;
+      line-height: 1
+    }
+
+    .player-close:hover {
+      color: var(--danger)
+    }
+
+    /* ── JSON drawer ─────────────────────────── */
+    .json-drawer {
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+      overflow: hidden;
+      max-height: 44px;
+      transition: max-height .25s ease
+    }
+
+    .json-drawer.open {
+      max-height: 240px
+    }
+
+    .json-toggle {
+      height: 44px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none
+    }
+
+    .json-toggle span {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .8px
+    }
+
+    .json-arrow {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 12px;
+      transition: transform .2s
+    }
+
+    .json-drawer.open .json-arrow {
+      transform: rotate(180deg)
+    }
+
+    .json-body {
+      padding: 0 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px
+    }
+
+    .json-out {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: #7ecfa0;
+      line-height: 1.5;
+      max-height: 150px;
+      overflow-y: auto;
+      white-space: pre
+    }
+
+    /* ── Buttons ─────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 12px;
+      transition: opacity .15s;
+      font-family: inherit
+    }
+
+    .btn:hover:not(:disabled) {
+      opacity: .82
+    }
+
+    .btn:disabled {
+      opacity: .35;
+      cursor: not-allowed
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: #fff
+    }
+
+    .btn-ghost {
+      background: var(--s3);
+      color: var(--text)
+    }
+
+    .btn-danger {
+      background: rgba(224, 80, 112, .12);
+      color: var(--danger)
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: #fff
+    }
+
+    .btn-edit {
+      background: rgba(79, 142, 247, .12);
+      color: var(--primary)
+    }
+
+    .btn-xs {
+      padding: 4px 9px;
+      font-size: 11px;
+      border-radius: 6px
+    }
+
+    .btn-github {
+      background: #238636;
+      color: #fff
+    }
+
+    .btn-github:disabled {
+      background: #164420
+    }
+
+    .gh-status {
+      font-size: 11px;
+      margin-left: 4px;
+      color: var(--muted)
+    }
+
+    .gh-status.saving {
+      color: var(--warn)
+    }
+
+    .gh-status.saved {
+      color: var(--success)
+    }
+
+    .gh-status.err {
+      color: var(--danger)
+    }
+
+    .gh-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+      background: var(--muted)
+    }
+
+    .gh-dot.ok {
+      background: var(--success)
+    }
+
+    .gh-dot.err {
+      background: var(--danger)
+    }
+
+    /* ── Modal ───────────────────────────────── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .7);
+      z-index: 200;
+      align-items: center;
+      justify-content: center
+    }
+
+    .overlay.open {
+      display: flex
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px;
+      max-width: 96vw;
+      max-height: 92vh;
+      overflow-y: auto
+    }
+
+    .modal-w480 {
+      width: 480px
+    }
+
+    .modal-w360 {
+      width: 360px
+    }
+
+    .modal-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .m-badge {
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      background: rgba(79, 142, 247, .15);
+      color: var(--primary);
+      font-weight: 600
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border)
+    }
+
+    /* ── Form ────────────────────────────────── */
+    .field {
+      margin-bottom: 13px
+    }
+
+    .field label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      margin-bottom: 5px
+    }
+
+    .field label span {
+      font-weight: 400;
+      text-transform: none
+    }
+
+    .field input,
+    .field textarea,
+    .field select {
+      width: 100%;
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 8px 11px;
+      outline: none;
+      transition: border-color .15s;
+      font-family: inherit
+    }
+
+    .field input:focus,
+    .field textarea:focus {
+      border-color: var(--primary)
+    }
+
+    .field textarea {
+      resize: vertical;
+      min-height: 60px
+    }
+
+    .field input[type="file"] {
+      padding: 7px;
+      cursor: pointer
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px
+    }
+
+    /* ── Progress bar ────────────────────────── */
+    .progress-wrap {
+      background: var(--s3);
+      border-radius: 6px;
+      height: 5px;
+      overflow: hidden;
+      margin-top: 6px;
+      display: none
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 6px;
+      width: 0;
+      transition: width .3s ease
+    }
+
+    .upstatus {
+      font-size: 11px;
+      margin-top: 6px;
+      padding: 7px 11px;
+      border-radius: 7px;
+      background: var(--s3);
+      line-height: 1.5;
+      display: none
+    }
+
+    .upstatus.uploading {
+      color: var(--warn)
+    }
+
+    .upstatus.done {
+      color: var(--success)
+    }
+
+    .upstatus.error {
+      color: var(--danger)
+    }
+
+    /* ── Confirm modal ───────────────────────── */
+    .confirm-msg {
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 6px
+    }
+
+    .confirm-sub {
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    /* ── Placeholder ─────────────────────────── */
+    .placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      min-height: 240px;
+      gap: 12px;
+      color: var(--muted)
+    }
+
+    .placeholder .ph-icon {
+      font-size: 48px
+    }
+
+    .placeholder p {
+      font-size: 13px
+    }
+
+    /* ── Toast ───────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 22px;
+      right: 22px;
+      z-index: 999;
+      background: var(--s3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 12px;
+      padding: 9px 16px;
+      border-radius: 9px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, .4);
+      opacity: 0;
+      transition: opacity .25s;
+      pointer-events: none
+    }
+
+    #toast.show {
+      opacity: 1
+    }
+
+    ::-webkit-scrollbar {
+      width: 4px
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── Topbar ──────────────────────────────────────────────────── -->
+  <div class="topbar">
+    <span style="font-size:20px">🎧</span>
+    <h1>PrepMantra</h1>
+    <span class="sub">Admin</span>
+    <div class="url-config" title="Backend base URL — change if deployed">
+      <span>🔗</span>
+      <input type="text" id="baseUrlInput" value="http://localhost:3000" onchange="updateBaseUrl()"
+        onblur="updateBaseUrl()" />
+    </div>
+    <div class="spacer"></div>
+    <span class="badge" id="statsLabel">0 courses · 0 episodes</span>
+    <span class="gh-status" id="ghStatus"></span>
+    <button class="btn btn-ghost btn-xs" onclick="toggleJSON()">{ } JSON</button>
+    <button class="btn btn-success btn-xs" onclick="downloadJSON()">⬇ data.json</button>
+    <button class="btn btn-ghost btn-xs" onclick="openGHSettings()" title="GitHub sync settings">⚙ GitHub</button>
+    <button class="btn btn-github btn-xs" id="ghSyncBtn" onclick="syncToGitHub()">☁ Save to GitHub</button>
+  </div>
+
+  <!-- ── Layout ─────────────────────────────────────────────────── -->
+  <div class="layout">
+
+    <!-- LEFT: Courses -->
+    <div class="panel courses-panel">
+      <div class="panel-head">
+        <h2>Courses</h2>
+        <button class="btn btn-primary btn-xs" onclick="openNewCourse()">+ New</button>
+      </div>
+      <div class="search-wrap">
+        <input type="text" id="courseSearch" placeholder="🔍  Search courses…" oninput="renderCourses()" />
+      </div>
+      <div class="panel-body" id="courseList"></div>
+    </div>
+
+    <!-- RIGHT: Episodes -->
+    <div class="panel episodes-panel">
+      <div class="panel-head">
+        <div class="ep-head-info">
+          <h2 id="epPanelTitle">Select a course</h2>
+          <small id="epPanelMeta"></small>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="epSearch" placeholder="🔍 Search episodes…" oninput="renderEpisodes()" style="background:var(--s2);border:1px solid var(--border);
+               border-radius:8px;color:var(--text);font-size:11px;padding:5px 10px;
+               outline:none;font-family:inherit;width:180px;display:none" />
+          <button class="btn btn-accent btn-xs" id="addEpBtn" onclick="openNewEpisode()" disabled>+ Episode</button>
+        </div>
+      </div>
+
+      <div class="ep-body" id="episodePanel">
+        <div class="placeholder">
+          <div class="ph-icon">👈</div>
+          <p>Select a course to view its episodes</p>
+        </div>
+      </div>
+
+      <!-- Audio Player Bar -->
+      <div class="player-bar" id="playerBar">
+        <span>🎵</span>
+        <div class="player-title" id="playerTitle">—</div>
+        <audio id="audioPlayer" controls preload="none"></audio>
+        <button class="player-close" onclick="closePlayer()" title="Close">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── JSON Drawer ─────────────────────────────────────────────── -->
+  <div class="json-drawer" id="jsonDrawer">
+    <div class="json-toggle" onclick="toggleJSON()">
+      <span>data.json</span>
+      <div onclick="event.stopPropagation()" style="display:flex;gap:6px;margin-left:8px">
+        <button class="btn btn-ghost btn-xs" onclick="copyJSON()">Copy</button>
+        <button class="btn btn-success btn-xs" onclick="downloadJSON()">Download</button>
+      </div>
+      <span class="json-arrow">▼</span>
+    </div>
+    <div class="json-body">
+      <div class="json-out" id="jsonOut">{ "categories": [] }</div>
+    </div>
+  </div>
+
+  <!-- ── MODAL: New / Edit Course ───────────────────────────────── -->
+  <div class="overlay" id="courseModal">
+    <div class="modal modal-w480">
+      <div class="modal-title" id="courseModalTitle">New Course</div>
+      <input type="hidden" id="cEditId" />
+      <div class="field">
+        <label>Course Name</label>
+        <input type="text" id="cName" placeholder="e.g. ADPO History" oninput="autoGenId()" list="existingCourses"
+          autocomplete="off" />
+        <datalist id="existingCourses"></datalist>
+        <div id="cDupWarn" style="display:none;font-size:11px;color:var(--warn);margin-top:5px">
+          ⚠ A course with this name already exists
+        </div>
+      </div>
+      <div class="field">
+        <label>Course ID <span>(slug — auto-generated)</span></label>
+        <input type="text" id="cId" placeholder="adpo_history" />
+      </div>
+      <div class="field">
+        <label>Description <span>(optional)</span></label>
+        <textarea id="cDesc" placeholder="Brief description of this course…"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeCourseModal()">Cancel</button>
+        <button class="btn btn-primary" id="saveCourseBtn" onclick="saveCourse()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL: Add / Edit Episode ──────────────────────────────── -->
+  <div class="overlay" id="epModal">
+    <div class="modal modal-w480">
+      <div class="modal-title">
+        <span id="epModalTitle">Add Episode</span>
+        <span class="m-badge" id="epModalCourse"></span>
+      </div>
+      <input type="hidden" id="epEditId" />
+
+      <div class="field">
+        <label>Episode Title</label>
+        <input type="text" id="epTitle" placeholder="Vedic Period" />
+      </div>
+      <div class="field">
+        <label>Description <span>(optional)</span></label>
+        <textarea id="epDesc" placeholder="Brief description…"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Order</label>
+          <input type="number" id="epOrder" min="1" placeholder="1" />
+        </div>
+        <div class="field">
+          <label>Duration <span>(seconds)</span></label>
+          <input type="number" id="epDuration" min="1" placeholder="Auto-detected" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Episode ID <span>(unique per course)</span></label>
+        <input type="text" id="epId" placeholder="history_1_vedic" />
+      </div>
+      <div class="field">
+        <label>Audio File</label>
+        <input type="file" id="epFile" accept="audio/*" onchange="onFilePicked()" />
+
+        <!-- Progress -->
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="upstatus" id="upStatus"></div>
+      </div>
+      <div class="field">
+        <label>Audio URL <span>(auto-filled or paste manually)</span></label>
+        <input type="text" id="epUrl" placeholder="http://…/stream/…" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeEpModal()">Cancel</button>
+        <button class="btn btn-accent" id="upBtn" onclick="uploadFile()" style="display:none">⬆ Upload</button>
+        <button class="btn btn-primary" id="saveEpBtn" onclick="saveEpisode()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL: Confirm Delete ───────────────────────────────────── -->
+  <div class="overlay" id="confirmModal">
+    <div class="modal modal-w360">
+      <div class="modal-title" style="color:var(--danger)">⚠ Confirm Delete</div>
+      <div class="confirm-msg" id="confirmMsg">Are you sure?</div>
+      <div class="confirm-sub" id="confirmSub"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
+        <button class="btn" id="confirmOkBtn" style="background:var(--danger);color:#fff"
+          onclick="confirmOk()">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL: GitHub Settings ────────────────────────────────────── -->
+  <div class="overlay" id="ghModal">
+    <div class="modal modal-w480">
+      <div class="modal-title">⚙ GitHub Sync Settings</div>
+
+      <div style="background:rgba(79,142,247,.08);border:1px solid rgba(79,142,247,.2);
+         border-radius:8px;padding:10px 13px;font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+        Your personal access token is stored only in this browser's localStorage and is
+        never sent anywhere except directly to <strong style="color:var(--primary)">api.github.com</strong>.
+        It is never logged to the console.
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Repo Owner <span>(GitHub username)</span></label>
+          <input type="text" id="ghOwner" placeholder="your-username" />
+        </div>
+        <div class="field">
+          <label>Repository Name</label>
+          <input type="text" id="ghRepo" placeholder="prepmantra-data" />
+        </div>
+      </div>
+      <div class="field">
+        <label>File Path in Repo</label>
+        <input type="text" id="ghPath" placeholder="data.json" />
+      </div>
+      <div class="field">
+        <label>Branch</label>
+        <input type="text" id="ghBranch" placeholder="main" />
+      </div>
+      <div class="field">
+        <label>Personal Access Token (PAT)
+          <span>— needs <code style="color:var(--primary)">repo</code> scope</span>
+        </label>
+        <div style="position:relative">
+          <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="padding-right:70px" />
+          <button class="btn btn-ghost btn-xs"
+            style="position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:3px 8px"
+            onclick="toggleTokenVis()">Show</button>
+        </div>
+        <div class="hint" style="margin-top:5px">
+          Create at GitHub → Settings → Developer settings → Personal access tokens → Fine-grained.
+          Grant <strong>Contents: Read &amp; write</strong> permission.
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeGHModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveGHConfig()">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toast ──────────────────────────────────────────────────── -->
+  <div id="toast"></div>
+
+  <script>
+    // ─────────────────────────────────────────────────────────────────
+    //  Config
+    // ─────────────────────────────────────────────────────────────────
+    const LS_KEY = 'prepmantra_v3';
+    const LS_URL_KEY = 'prepmantra_base_url';
+
+    let BASE_URL = forceHttps(localStorage.getItem(LS_URL_KEY) || 'https://prepmantra-data.onrender.com');
+    document.getElementById('baseUrlInput').value = BASE_URL;
+
+    function forceHttps(url) {
+      return url.trim().replace(/\/$/, '').replace(/^http:\/\//i, 'https://');
+    }
+
+    function updateBaseUrl() {
+      BASE_URL = forceHttps(document.getElementById('baseUrlInput').value);
+      document.getElementById('baseUrlInput').value = BASE_URL; // show corrected value
+      localStorage.setItem(LS_URL_KEY, BASE_URL);
+      toast('Base URL updated ✓');
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  State
+    // ─────────────────────────────────────────────────────────────────
+    let data = { categories: [] };
+    let activeCourseIdx = null;
+    let editingEpId = null;
+    let playingEpId = null;
+
+    // ─────────────────────────────────────────────────────────────────
+    //  Persistence  (GitHub = source of truth; localStorage = cache)
+    // ─────────────────────────────────────────────────────────────────
+
+    // Public raw URL — readable without a token (works if prepmantra-data is public)
+    const RAW_DATA_URL = 'https://raw.githubusercontent.com/ahmedansarin-boop/prepmantra-data/main/data.json';
+
+    async function load() {
+      // Step 1 — seed from localStorage immediately (instant, no flash)
+      try { const s = localStorage.getItem(LS_KEY); if (s) data = JSON.parse(s); } catch {}
+      migrateLegacyUrls();
+
+      const cfg = getGHConfig();
+      let fetched = false;
+
+      // Step 2 — try GitHub API with token (works for private repos)
+      if (cfg.owner && cfg.repo && cfg.token) {
+        try {
+          const apiUrl = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path || 'data.json'}?ref=${cfg.branch || 'main'}`;
+          const res = await fetch(apiUrl, {
+            headers: {
+              'Authorization': `token ${cfg.token}`,
+              'Accept': 'application/vnd.github+json',
+            }
+          });
+          if (res.ok) {
+            const fileData = await res.json();
+            const jsonStr = decodeURIComponent(escape(atob(fileData.content.replace(/\n/g, ''))));
+            const parsed = JSON.parse(jsonStr);
+            if (parsed && Array.isArray(parsed.categories)) {
+              data = parsed;
+              fetched = true;
+            }
+          }
+        } catch (e) { /* try public raw URL next */ }
+      }
+
+      // Step 3 — fallback: public raw URL (no token needed)
+      if (!fetched) {
+        try {
+          const res = await fetch(RAW_DATA_URL + '?t=' + Date.now()); // cache-bust
+          if (res.ok) {
+            const parsed = await res.json();
+            if (parsed && Array.isArray(parsed.categories) && parsed.categories.length > 0) {
+              data = parsed;
+              fetched = true;
+            }
+          }
+        } catch (e) { /* use localStorage fallback silently */ }
+      }
+
+      migrateLegacyUrls();
+      if (fetched) save(); // refresh localStorage cache with latest
+      return fetched;
+    }
+
+    function migrateLegacyUrls() {
+      let changed = false;
+      data.categories.forEach(cat => {
+        cat.episodes.forEach(ep => {
+          if (ep.audio_url && ep.audio_url.startsWith('http://')) {
+            ep.audio_url = forceHttps(ep.audio_url);
+            changed = true;
+          }
+        });
+      });
+      if (changed) save();
+    }
+
+    function save() { localStorage.setItem(LS_KEY, JSON.stringify(data)); }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  Helpers
+    // ─────────────────────────────────────────────────────────────────
+    function slugify(t) {
+      return t.toLowerCase().trim()
+        .replace(/[^a-z0-9\u0900-\u097f]+/gi, '_').replace(/^_+|_+$/g, '');
+    }
+    function fmtDur(s) {
+      if (!s) return '—';
+      return `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
+    }
+    function toast(msg, err) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.style.borderColor = err ? 'var(--danger)' : 'var(--success)';
+      el.classList.add('show');
+      clearTimeout(el._t);
+      el._t = setTimeout(() => el.classList.remove('show'), 2800);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  Confirm-delete modal
+    // ─────────────────────────────────────────────────────────────────
+    let _confirmCb = null;
+    function askConfirm(msg, sub, cb) {
+      _confirmCb = cb;
+      document.getElementById('confirmMsg').textContent = msg;
+      document.getElementById('confirmSub').textContent = sub || '';
+      document.getElementById('confirmModal').classList.add('open');
+    }
+    function closeConfirm() { document.getElementById('confirmModal').classList.remove('open'); _confirmCb = null; }
+    function confirmOk() { closeConfirm(); if (_confirmCb) _confirmCb(); }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  Audio Player
+    // ─────────────────────────────────────────────────────────────────
+    const audioEl = document.getElementById('audioPlayer');
+    audioEl.addEventListener('ended', () => {
+      playingEpId = null; renderEpisodes();
     });
 
-    saveState();
-    closeEpModal();
-    render();
-  }
+    function playEpisode(epId, title, url) {
+      if (!url) { toast('No audio URL for this episode', true); return; }
+      playingEpId = epId;
+      document.getElementById('playerTitle').textContent = title;
+      audioEl.src = url;
+      audioEl.play().catch(e => toast('Playback error: ' + e.message, true));
+      document.getElementById('playerBar').classList.add('show');
+      renderEpisodes(); // update button state
+    }
 
-  function deleteEpisode(epId) {
-    if (!confirm('Delete this episode?')) return;
-    const cat = state.categories[selectedCatIndex];
-    cat.episodes = cat.episodes.filter(e => e.id !== epId);
-    saveState();
-    render();
-  }
+    function closePlayer() {
+      audioEl.pause(); audioEl.src = '';
+      playingEpId = null;
+      document.getElementById('playerBar').classList.remove('show');
+      renderEpisodes();
+    }
 
-  // ── JSON Output ────────────────────────────────────────────────────────────────
-  function getJSON() {
-    return JSON.stringify({ categories: state.categories }, null, 2);
-  }
+    // ─────────────────────────────────────────────────────────────────
+    //  Course CRUD
+    // ─────────────────────────────────────────────────────────────────
+    function openNewCourse() {
+      document.getElementById('courseModalTitle').textContent = 'New Course';
+      document.getElementById('saveCourseBtn').textContent = 'Create';
+      document.getElementById('cEditId').value = '';
+      document.getElementById('cId').value = '';
+      document.getElementById('cName').value = '';
+      document.getElementById('cDesc').value = '';
+      document.getElementById('cDupWarn').style.display = 'none';
+      refreshCourseDatalist();
+      document.getElementById('courseModal').classList.add('open');
+      setTimeout(() => document.getElementById('cName').focus(), 50);
+    }
 
-  function generateJSON() {
-    document.getElementById('jsonOutput').textContent = getJSON();
-  }
+    function openEditCourse(idx) {
+      const c = data.categories[idx];
+      document.getElementById('courseModalTitle').textContent = 'Edit Course';
+      document.getElementById('saveCourseBtn').textContent = 'Save Changes';
+      document.getElementById('cEditId').value = c.id;
+      document.getElementById('cId').value = c.id;
+      document.getElementById('cName').value = c.name;
+      document.getElementById('cDesc').value = c.description || '';
+      document.getElementById('cDupWarn').style.display = 'none';
+      document.getElementById('courseModal').classList.add('open');
+      setTimeout(() => document.getElementById('cName').focus(), 50);
+    }
 
-  function copyJSON() {
-    navigator.clipboard.writeText(getJSON())
-      .then(() => alert('JSON copied to clipboard!'))
-      .catch(() => alert('Copy failed — try selecting the text manually.'));
-  }
+    function closeCourseModal() { document.getElementById('courseModal').classList.remove('open'); }
 
-  function downloadJSON() {
-    const blob = new Blob([getJSON()], { type: 'application/json' });
-    const a    = document.createElement('a');
-    a.href     = URL.createObjectURL(blob);
-    a.download = 'data.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }
+    function autoGenId() {
+      const editing = !!document.getElementById('cEditId').value;
+      if (editing) return; // don't overwrite ID when editing
+      const name = document.getElementById('cName').value;
+      const id = slugify(name);
+      document.getElementById('cId').value = id;
+      const dup = data.categories.find(c =>
+        c.name.toLowerCase() === name.toLowerCase() || c.id === id);
+      document.getElementById('cDupWarn').style.display = dup ? 'block' : 'none';
+    }
 
-  // ── Close modal on overlay click ───────────────────────────────────────────────
-  document.getElementById('catModal').addEventListener('click', function(e) {
-    if (e.target === this) closeCatModal();
-  });
-  document.getElementById('epModal').addEventListener('click', function(e) {
-    if (e.target === this) closeEpModal();
-  });
+    function saveCourse() {
+      const name = document.getElementById('cName').value.trim();
+      const id = document.getElementById('cId').value.trim();
+      const desc = document.getElementById('cDesc').value.trim();
+      const editId = document.getElementById('cEditId').value;
 
-  // ── Keyboard shortcuts ─────────────────────────────────────────────────────────
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeCatModal(); closeEpModal(); }
-  });
+      if (!name || !id) { toast('Name and ID are required', true); return; }
 
-  // ── Init ───────────────────────────────────────────────────────────────────────
-  loadState();
-  render();
-</script>
+      if (editId) {
+        // Edit mode
+        const idx = data.categories.findIndex(c => c.id === editId);
+        if (idx === -1) return;
+        data.categories[idx].name = name;
+        data.categories[idx].description = desc;
+        // Allow ID rename only if not duplicate
+        if (id !== editId && data.categories.find(c => c.id === id)) {
+          toast('Course ID already taken', true); return;
+        }
+        data.categories[idx].id = id;
+        toast(`"${name}" updated ✓`);
+      } else {
+        // Create mode
+        if (data.categories.find(c => c.id === id)) { toast('Course ID already exists', true); return; }
+        if (data.categories.find(c => c.name.toLowerCase() === name.toLowerCase())) { toast('Course name already exists', true); return; }
+        data.categories.push({ id, name, description: desc, episodes: [] });
+        activeCourseIdx = data.categories.length - 1;
+        toast(`"${name}" created ✓`);
+      }
+
+      save(); closeCourseModal(); render();
+    }
+
+    function deleteCourse(idx, e) {
+      e && e.stopPropagation();
+      const c = data.categories[idx];
+      askConfirm(
+        `Delete course "${c.name}"?`,
+        `This will permanently remove ${c.episodes.length} episode(s).`,
+        () => {
+          data.categories.splice(idx, 1);
+          if (activeCourseIdx === idx) activeCourseIdx = null;
+          else if (activeCourseIdx > idx) activeCourseIdx--;
+          save(); render(); toast('Course deleted');
+        }
+      );
+    }
+
+    function selectCourse(idx) { activeCourseIdx = idx; render(); }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  Episode CRUD
+    // ─────────────────────────────────────────────────────────────────
+    function resetEpForm() {
+      ['epTitle', 'epDesc', 'epId', 'epUrl'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('epFile').value = '';
+      document.getElementById('epDuration').value = '';
+      document.getElementById('upStatus').style.display = 'none';
+      document.getElementById('upBtn').style.display = 'none';
+      document.getElementById('progressWrap').style.display = 'none';
+      document.getElementById('progressBar').style.width = '0';
+      setFormDisabled(false);
+    }
+
+    function setFormDisabled(dis) {
+      ['epTitle', 'epDesc', 'epId', 'epUrl', 'epOrder', 'epDuration', 'epFile',
+        'saveEpBtn', 'upBtn'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.disabled = dis;
+        });
+    }
+
+    function openNewEpisode() {
+      if (activeCourseIdx === null) return;
+      editingEpId = null;
+      const cat = data.categories[activeCourseIdx];
+      resetEpForm();
+      document.getElementById('epModalTitle').textContent = 'Add Episode';
+      document.getElementById('epModalCourse').textContent = cat.name;
+      document.getElementById('epEditId').value = '';
+      document.getElementById('epOrder').value = cat.episodes.length + 1;
+      document.getElementById('epModal').classList.add('open');
+      setTimeout(() => document.getElementById('epTitle').focus(), 50);
+    }
+
+    function openEditEpisode(epId) {
+      if (activeCourseIdx === null) return;
+      const cat = data.categories[activeCourseIdx];
+      const ep = cat.episodes.find(e => e.id === epId);
+      if (!ep) return;
+      editingEpId = epId;
+      resetEpForm();
+      document.getElementById('epModalTitle').textContent = 'Edit Episode';
+      document.getElementById('epModalCourse').textContent = cat.name;
+      document.getElementById('epEditId').value = epId;
+      document.getElementById('epTitle').value = ep.title;
+      document.getElementById('epDesc').value = ep.description || '';
+      document.getElementById('epOrder').value = ep.order;
+      document.getElementById('epDuration').value = ep.duration;
+      document.getElementById('epId').value = ep.id;
+      document.getElementById('epUrl').value = ep.audio_url || '';
+      document.getElementById('epModal').classList.add('open');
+      setTimeout(() => document.getElementById('epTitle').focus(), 50);
+    }
+
+    function closeEpModal() { document.getElementById('epModal').classList.remove('open'); }
+
+    function saveEpisode() {
+      const title = document.getElementById('epTitle').value.trim();
+      const desc = document.getElementById('epDesc').value.trim();
+      const order = parseInt(document.getElementById('epOrder').value);
+      const duration = parseInt(document.getElementById('epDuration').value);
+      const id = document.getElementById('epId').value.trim();
+      const url = document.getElementById('epUrl').value.trim();
+
+      if (!title) { toast('Title is required', true); return; }
+      if (!id) { toast('Episode ID is required', true); return; }
+      if (!order) { toast('Order is required', true); return; }
+      if (!duration) { toast('Duration is required (in seconds)', true); return; }
+
+      const cat = data.categories[activeCourseIdx];
+
+      if (editingEpId) {
+        const idx = cat.episodes.findIndex(e => e.id === editingEpId);
+        if (idx === -1) { toast('Episode not found', true); return; }
+        if (id !== editingEpId && cat.episodes.find(e => e.id === id)) { toast(`ID "${id}" already exists`, true); return; }
+        cat.episodes[idx] = { id, title, description: desc, audio_url: url, duration, order };
+        toast(`"${title}" updated ✓`);
+      } else {
+        if (cat.episodes.find(e => e.id === id)) { toast(`Episode ID "${id}" already exists`, true); return; }
+        cat.episodes.push({ id, title, description: desc, audio_url: url, duration, order });
+        toast(`"${title}" added ✓`);
+      }
+      save(); closeEpModal(); render();
+    }
+
+    function deleteEpisode(epId) {
+      const cat = data.categories[activeCourseIdx];
+      const ep = cat.episodes.find(e => e.id === epId);
+      if (!ep) return;
+      askConfirm(
+        `Delete "${ep.title}"?`,
+        'This action cannot be undone.',
+        () => {
+          cat.episodes = cat.episodes.filter(e => e.id !== epId);
+          if (playingEpId === epId) closePlayer();
+          save(); render(); toast('Episode deleted');
+        }
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  Episode reordering
+    // ─────────────────────────────────────────────────────────────────
+    function moveEpisode(epId, direction) {
+      const cat = data.categories[activeCourseIdx];
+      const sorted = [...cat.episodes].sort((a, b) => a.order - b.order);
+      const idx = sorted.findIndex(e => e.id === epId);
+      const swapIdx = idx + direction; // -1 = up, +1 = down
+      if (swapIdx < 0 || swapIdx >= sorted.length) return;
+
+      // Swap order values
+      const tmpOrder = sorted[idx].order;
+      sorted[idx].order = sorted[swapIdx].order;
+      sorted[swapIdx].order = tmpOrder;
+
+      // Write back
+      sorted.forEach(ep => {
+        const orig = cat.episodes.find(e => e.id === ep.id);
+        if (orig) orig.order = ep.order;
+      });
+
+      save(); renderEpisodes(); refreshJSON();
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  Filename parsing + duration detection
+    // ─────────────────────────────────────────────────────────────────
+    function parseFilename(filename) {
+      const base = filename.replace(/\.[^.]+$/, '');
+      const mA = base.match(/^[Ee]pisode[-_ ](\d+)[-_ ]+(.+)$/);
+      if (mA) return { order: parseInt(mA[1]), title: mA[2].replace(/[-_]+/g, ' ').trim() };
+      const mB = base.match(/^(\d{1,3})[\-\.\s]+(.+)$/);
+      if (mB) return { order: parseInt(mB[1]), title: mB[2].replace(/[-_]+/g, ' ').trim() };
+      const mC = base.match(/^(.+?)[-_ ]+(\d{1,3})$/);
+      if (mC) return { order: parseInt(mC[2]), title: mC[1].replace(/[-_]+/g, ' ').trim() };
+      return { order: null, title: base.replace(/[-_]+/g, ' ').trim() };
+    }
+
+    function getAudioDuration(file) {
+      return new Promise(resolve => {
+        const a = document.createElement('audio');
+        const u = URL.createObjectURL(file);
+        a.preload = 'metadata';
+        a.onloadedmetadata = () => { URL.revokeObjectURL(u); resolve(Math.round(a.duration) || null); };
+        a.onerror = () => { URL.revokeObjectURL(u); resolve(null); };
+        a.src = u;
+      });
+    }
+
+    async function onFilePicked() {
+      const file = document.getElementById('epFile').files[0];
+      if (!file) return;
+      const mb = (file.size / (1024 * 1024)).toFixed(1);
+      const st = document.getElementById('upStatus');
+      st.style.display = 'block'; st.className = 'upstatus uploading';
+      st.textContent = `📂 Reading ${file.name} (${mb} MB)…`;
+
+      const parsed = parseFilename(file.name);
+      if (parsed.title && !document.getElementById('epTitle').value)
+        document.getElementById('epTitle').value = parsed.title;
+      if (parsed.order && !document.getElementById('epOrder').value)
+        document.getElementById('epOrder').value = parsed.order;
+
+      if (!document.getElementById('epId').value && activeCourseIdx !== null) {
+        const catId = data.categories[activeCourseIdx].id;
+        const ord = parsed.order || (data.categories[activeCourseIdx].episodes.length + 1);
+        document.getElementById('epId').value = `${catId}_${ord}_${slugify(parsed.title).slice(0, 20)}`;
+      }
+
+      const dur = await getAudioDuration(file);
+      if (dur && !document.getElementById('epDuration').value)
+        document.getElementById('epDuration').value = dur;
+
+      const large = file.size > 20 * 1024 * 1024;
+      const durStr = dur ? fmtDur(dur) : '(enter manually)';
+      st.className = 'upstatus ' + (large ? 'uploading' : 'done');
+      st.textContent = (large ? `⚠ ${mb}MB — auto-compress on server · ` : `✅ ${mb}MB · `)
+        + `Duration: ${durStr}`;
+
+      document.getElementById('upBtn').style.display = 'inline-flex';
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  Upload with progress (XMLHttpRequest for progress events)
+    // ─────────────────────────────────────────────────────────────────
+    async function uploadFile() {
+      const file = document.getElementById('epFile').files[0];
+      if (!file) { toast('Select a file first', true); return; }
+
+      const btn = document.getElementById('upBtn');
+      const st = document.getElementById('upStatus');
+      const progWrap = document.getElementById('progressWrap');
+      const progBar = document.getElementById('progressBar');
+
+      btn.disabled = true; btn.textContent = '⏳ Uploading…';
+      st.style.display = 'block'; st.className = 'upstatus uploading';
+      progWrap.style.display = 'block'; progBar.style.width = '0%';
+      setFormDisabled(true);
+
+      const large = file.size > 20 * 1024 * 1024;
+      const mb = (file.size / (1024 * 1024)).toFixed(1);
+      st.textContent = large
+        ? `⏳ Compressing ${mb}MB → uploading to Telegram…`
+        : `⏳ Uploading ${mb}MB to Telegram…`;
+
+      const fd = new FormData();
+      fd.append('audio', file);
+
+      try {
+        const resp = await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const pct = Math.round(e.loaded / e.total * 100);
+              progBar.style.width = pct + '%';
+              st.textContent = large
+                ? `⏳ Sending to server: ${pct}% (compression + Telegram upload next…)`
+                : `⏳ Uploading: ${pct}%`;
+            }
+          };
+
+          xhr.onload = () => {
+            progBar.style.width = '100%';
+            try { resolve(JSON.parse(xhr.responseText)); }
+            catch { reject(new Error('Invalid server response')); }
+          };
+          xhr.onerror = () => reject(new Error('Network error — is the server running?'));
+          xhr.open('POST', `${BASE_URL}/upload`);
+          xhr.send(fd);
+        });
+
+        if (!resp.success) throw new Error(resp.error || 'Upload failed');
+
+        document.getElementById('epUrl').value = resp.stream_url;
+        st.className = 'upstatus done';
+        st.textContent = resp.was_compressed
+          ? `✅ Compressed ${resp.original_mb}MB → ${resp.compressed_mb}MB · Uploaded to Telegram`
+          : `✅ Uploaded (${resp.original_mb}MB) · Telegram ready`;
+        toast('Audio uploaded ✓');
+      } catch (err) {
+        st.className = 'upstatus error';
+        st.textContent = `❌ ${err.message}`;
+        toast(err.message, true);
+      }
+
+      btn.disabled = false; btn.textContent = '⬆ Upload';
+      setFormDisabled(false);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  JSON
+    // ─────────────────────────────────────────────────────────────────
+    function getJSON() { return JSON.stringify(data, null, 2); }
+    function copyJSON() { navigator.clipboard.writeText(getJSON()).then(() => toast('JSON copied')); }
+    function downloadJSON() {
+      const a = Object.assign(document.createElement('a'), {
+        href: URL.createObjectURL(new Blob([getJSON()], { type: 'application/json' })),
+        download: 'data.json'
+      });
+      a.click(); URL.revokeObjectURL(a.href);
+    }
+    function toggleJSON() { document.getElementById('jsonDrawer').classList.toggle('open'); }
+    function refreshJSON() { document.getElementById('jsonOut').textContent = getJSON(); }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  Render
+    // ─────────────────────────────────────────────────────────────────
+    function refreshCourseDatalist() {
+      document.getElementById('existingCourses').innerHTML =
+        data.categories.map(c => `<option value="${c.name}">ID: ${c.id}</option>`).join('');
+    }
+
+    function renderCourses() {
+      const q = (document.getElementById('courseSearch').value || '').toLowerCase();
+      const el = document.getElementById('courseList');
+      const filtered = data.categories.filter(c =>
+        !q || c.name.toLowerCase().includes(q)
+      );
+
+      if (!data.categories.length) {
+        el.innerHTML = `<div class="placeholder" style="min-height:240px">
+      <div class="ph-icon">📚</div><p>No courses yet</p>
+      <button class="btn btn-primary" onclick="openNewCourse()">Create first course</button>
+    </div>`;
+        return;
+      }
+      if (!filtered.length) {
+        el.innerHTML = `<div class="placeholder" style="min-height:180px">
+      <div class="ph-icon">🔍</div><p>No courses match "${q}"</p></div>`;
+        return;
+      }
+
+      el.innerHTML = data.categories.map((c, i) => {
+        if (q && !c.name.toLowerCase().includes(q)) return '';
+        const uploaded = c.episodes.filter(e => e.audio_url).length;
+        return `
+    <div class="course-card ${activeCourseIdx === i ? 'active' : ''}" onclick="selectCourse(${i})">
+      <div class="course-icon">📖</div>
+      <div class="course-info">
+        <div class="course-name">${c.name}</div>
+        <div class="course-meta">
+          ${c.episodes.length} ep · <span style="color:var(--success)">${uploaded}✔</span>
+          ${c.description ? ` · ${c.description.slice(0, 28)}…` : ''}
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="icon-btn edit" title="Edit course" onclick="openEditCourse(${i});event.stopPropagation()">✏</button>
+        <button class="icon-btn del"  title="Delete"      onclick="deleteCourse(${i},event)">✕</button>
+      </div>
+    </div>`;
+      }).join('');
+    }
+
+    function renderEpisodes() {
+      const titleEl = document.getElementById('epPanelTitle');
+      const metaEl = document.getElementById('epPanelMeta');
+      const panel = document.getElementById('episodePanel');
+      const btn = document.getElementById('addEpBtn');
+      const searchEl = document.getElementById('epSearch');
+
+      if (activeCourseIdx === null) {
+        titleEl.textContent = 'Select a course';
+        metaEl.textContent = '';
+        btn.disabled = true;
+        searchEl.style.display = 'none';
+        panel.innerHTML = `<div class="placeholder">
+      <div class="ph-icon">👈</div>
+      <p>Select a course to manage its episodes</p>
+    </div>`;
+        return;
+      }
+
+      const cat = data.categories[activeCourseIdx];
+      titleEl.textContent = cat.name;
+      metaEl.textContent = `ID: ${cat.id}`;
+      btn.disabled = false;
+      searchEl.style.display = '';
+
+      const q = (searchEl.value || '').toLowerCase();
+      const sorted = [...cat.episodes].sort((a, b) => a.order - b.order);
+      const shown = sorted.filter(ep => !q || ep.title.toLowerCase().includes(q));
+
+      if (!cat.episodes.length) {
+        panel.innerHTML = `<div class="placeholder">
+      <div class="ph-icon">🎵</div><p>No episodes yet</p>
+      <button class="btn btn-accent" onclick="openNewEpisode()">Add first episode</button>
+    </div>`;
+        return;
+      }
+      if (!shown.length) {
+        panel.innerHTML = `<div class="placeholder" style="min-height:180px">
+      <div class="ph-icon">🔍</div><p>No episodes match "${q}"</p></div>`;
+        return;
+      }
+
+      panel.innerHTML = `
+    <table class="ep-table">
+      <thead>
+        <tr>
+          <th style="width:60px">#</th>
+          <th>Episode</th>
+          <th style="width:90px">Duration</th>
+          <th style="width:120px">Audio</th>
+          <th style="width:150px;text-align:right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${shown.map((ep, idx) => {
+        const isFirst = idx === 0;
+        const isLast = idx === shown.length - 1;
+        const playing = playingEpId === ep.id;
+        const hasUrl = !!ep.audio_url;
+        return `
+          <tr>
+            <td>
+              <div class="ord-cell">
+                <div class="ep-num">${ep.order}</div>
+                <div class="ord-btns">
+                  <button class="ord-btn" ${isFirst ? 'disabled' : ''} onclick="moveEpisode('${ep.id}',-1)" title="Move up">▲</button>
+                  <button class="ord-btn" ${isLast ? 'disabled' : ''} onclick="moveEpisode('${ep.id}',1)" title="Move down">▼</button>
+                </div>
+              </div>
+            </td>
+            <td class="ep-title-cell">
+              <div class="ep-title">${ep.title}</div>
+              ${ep.description ? `<div class="ep-desc">${ep.description}</div>` : ''}
+            </td>
+            <td><span style="font-size:11px;color:var(--muted)">${fmtDur(ep.duration)}</span></td>
+            <td>
+              ${hasUrl
+            ? `<div class="status-ok">✔ Ready</div>
+                   <span class="ep-url-small" title="${ep.audio_url}">${ep.audio_url}</span>`
+            : `<div class="status-warn">⚠ Not Uploaded</div>`}
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="play-btn ${playing ? 'playing' : ''}"
+                  onclick="playEpisode('${ep.id}','${ep.title.replace(/'/g, "\\'")}','${ep.audio_url || ''}')"
+                  title="${playing ? 'Now playing' : 'Play preview'}"
+                  ${!hasUrl ? 'disabled style="opacity:.3;cursor:not-allowed"' : ''}>
+                  ${playing ? '♫' : '▶'}
+                </button>
+                <button class="btn btn-edit btn-xs" onclick="openEditEpisode('${ep.id}')">✏</button>
+                <button class="btn btn-danger btn-xs" onclick="deleteEpisode('${ep.id}')">✕</button>
+              </div>
+            </td>
+          </tr>`;
+      }).join('')}
+      </tbody>
+    </table>`;
+    }
+
+    function updateStats() {
+      const c = data.categories.length;
+      const e = data.categories.reduce((n, cat) => n + cat.episodes.length, 0);
+      document.getElementById('statsLabel').textContent =
+        `${c} course${c !== 1 ? 's' : ''} · ${e} episode${e !== 1 ? 's' : ''}`;
+    }
+
+    function render() {
+      renderCourses(); renderEpisodes(); updateStats();
+      refreshJSON(); refreshCourseDatalist();
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  GitHub Sync
+    // ─────────────────────────────────────────────────────────────────
+    const GH_LS = 'prepmantra_gh_cfg';
+
+    function loadGHConfig() {
+      try {
+        const c = JSON.parse(localStorage.getItem(GH_LS) || '{}');
+        // Pre-fill known defaults so user only has to paste their PAT once
+        document.getElementById('ghOwner').value = c.owner || 'ahmedansarin-boop';
+        document.getElementById('ghRepo').value = c.repo || 'prepmantra-data';
+        document.getElementById('ghPath').value = c.path || 'data.json';
+        document.getElementById('ghBranch').value = c.branch || 'main';
+        document.getElementById('ghToken').value = c.token || '';
+      } catch { }
+    }
+
+    function saveGHConfig() {
+      const cfg = {
+        owner: document.getElementById('ghOwner').value.trim(),
+        repo: document.getElementById('ghRepo').value.trim(),
+        path: document.getElementById('ghPath').value.trim() || 'data.json',
+        branch: document.getElementById('ghBranch').value.trim() || 'main',
+        token: document.getElementById('ghToken').value.trim(),
+      };
+      if (!cfg.owner || !cfg.repo || !cfg.token) { toast('Owner, repo and token are required', true); return; }
+      localStorage.setItem(GH_LS, JSON.stringify(cfg));
+      closeGHModal();
+      toast('GitHub settings saved ✓');
+      updateGHDot();
+    }
+
+    function getGHConfig() {
+      try { return JSON.parse(localStorage.getItem(GH_LS) || '{}'); }
+      catch { return {}; }
+    }
+
+    function updateGHDot() {
+      const c = getGHConfig();
+      const el = document.getElementById('ghStatus');
+      const ok = !!(c.owner && c.repo && c.token);
+      el.innerHTML = ok
+        ? `<span class="gh-dot ok"></span>GitHub ready`
+        : `<span class="gh-dot"></span>GitHub not configured`;
+      el.className = 'gh-status';
+    }
+
+    function openGHSettings() {
+      loadGHConfig();
+      document.getElementById('ghModal').classList.add('open');
+      setTimeout(() => document.getElementById('ghOwner').focus(), 50);
+    }
+    function closeGHModal() { document.getElementById('ghModal').classList.remove('open'); }
+
+    function toggleTokenVis() {
+      const inp = document.getElementById('ghToken');
+      const btn = inp.nextElementSibling;
+      if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'Hide'; }
+      else { inp.type = 'password'; btn.textContent = 'Show'; }
+    }
+
+    async function syncToGitHub() {
+      const cfg = getGHConfig();
+      if (!cfg.owner || !cfg.repo || !cfg.token) {
+        openGHSettings();
+        toast('Configure GitHub settings first', true);
+        return;
+      }
+
+      const btn = document.getElementById('ghSyncBtn');
+      const status = document.getElementById('ghStatus');
+      btn.disabled = true;
+      btn.textContent = '⏳ Saving…';
+      status.className = 'gh-status saving';
+      status.innerHTML = '<span class="gh-dot" style="background:var(--warn)"></span>Saving…';
+
+      const apiBase = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`;
+      // Token never logged — only used in Authorization header
+      const headers = {
+        'Authorization': `token ${cfg.token}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+      };
+
+      try {
+        // Step 1: GET existing file to obtain SHA (required by GitHub API for updates)
+        let sha = null;
+        const getRes = await fetch(`${apiBase}?ref=${cfg.branch}`, { headers });
+        if (getRes.ok) {
+          const fileData = await getRes.json();
+          sha = fileData.sha || null;
+        } else if (getRes.status !== 404) {
+          // 404 = new file (no SHA needed); anything else = real error
+          const err = await getRes.json().catch(() => ({}));
+          throw new Error(`GitHub GET failed: ${err.message || getRes.status}`);
+        }
+
+        // Step 2: Base64-encode current JSON
+        const jsonStr = getJSON();
+        const b64 = btoa(unescape(encodeURIComponent(jsonStr))); // handles UTF-8/Hindi chars
+
+        // Step 3: PUT to create/update the file
+        const body = {
+          message: `update ${cfg.path} via PrepMantra Admin`,
+          content: b64,
+          branch: cfg.branch,
+        };
+        if (sha) body.sha = sha;
+
+        const putRes = await fetch(apiBase, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(body),
+        });
+
+        if (!putRes.ok) {
+          const err = await putRes.json().catch(() => ({}));
+          throw new Error(err.message || `GitHub PUT failed (${putRes.status})`);
+        }
+
+        // Success
+        status.className = 'gh-status saved';
+        status.innerHTML = '<span class="gh-dot ok"></span>Saved to GitHub ✓';
+        toast('data.json saved to GitHub ✓');
+        setTimeout(() => updateGHDot(), 4000);
+
+      } catch (err) {
+        status.className = 'gh-status err';
+        status.innerHTML = `<span class="gh-dot err"></span>${err.message}`;
+        toast(err.message, true);
+      }
+
+      btn.disabled = false;
+      btn.textContent = '☁ Save to GitHub';
+    }
+
+    // ── Close overlays on backdrop click ─────────────────────────────
+    ['courseModal', 'epModal', 'confirmModal', 'ghModal'].forEach(id => {
+      document.getElementById(id).addEventListener('click', function (e) {
+        if (e.target === this) document.getElementById(id).classList.remove('open');
+      });
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape')
+        ['courseModal', 'epModal', 'confirmModal', 'ghModal'].forEach(id =>
+          document.getElementById(id).classList.remove('open'));
+    });
+
+    // ── Init ──────────────────────────────────────────────────────────
+    async function initApp() {
+      // Render immediately from localStorage (no blank screen)
+      render();
+      updateGHDot();
+
+      // Show a subtle top banner while fetching
+      const banner = document.createElement('div');
+      banner.style.cssText = [
+        'position:fixed', 'top:52px', 'left:0', 'right:0', 'z-index:500',
+        'background:rgba(79,142,247,.12)', 'border-bottom:1px solid rgba(79,142,247,.25)',
+        'color:#7eb8f7', 'font-size:11px', 'font-weight:600', 'padding:6px 16px',
+        'display:flex', 'align-items:center', 'gap:8px', 'transition:opacity .5s'
+      ].join(';');
+      banner.textContent = '⏳ Loading latest data from GitHub…';
+      document.body.appendChild(banner);
+
+      let fetched = false;
+      try {
+        fetched = await load();
+      } catch (e) {
+        fetched = false;
+      }
+
+      // Re-render with GitHub data
+      render();
+
+      // Update banner to show result
+      if (fetched) {
+        banner.textContent = '✅ Data loaded from GitHub';
+        banner.style.background = 'rgba(63,200,122,.12)';
+        banner.style.borderColor = 'rgba(63,200,122,.25)';
+        banner.style.color = 'var(--success)';
+      } else {
+        banner.textContent = '💾 Using cached data — save to GitHub to sync across devices';
+        banner.style.background = 'rgba(240,160,64,.1)';
+        banner.style.borderColor = 'rgba(240,160,64,.2)';
+        banner.style.color = 'var(--warn)';
+      }
+
+      // Fade out after 3 seconds
+      setTimeout(() => {
+        banner.style.opacity = '0';
+        setTimeout(() => banner.remove(), 600);
+      }, 3000);
+    }
+
+    initApp();
+  </script>
 </body>
+
 </html>

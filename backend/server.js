@@ -2,12 +2,12 @@
 
 require('dotenv').config();
 
-const express   = require('express');
-const cors      = require('cors');
-const multer    = require('multer');
-const axios     = require('axios');
-const FormData  = require('form-data');
-const ffmpeg    = require('fluent-ffmpeg');
+const express = require('express');
+const cors = require('cors');
+const multer = require('multer');
+const axios = require('axios');
+const FormData = require('form-data');
+const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('ffmpeg-static');
 const { Readable, PassThrough } = require('stream');
 
@@ -16,16 +16,20 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const CHAT_ID   = process.env.CHAT_ID;
-const PORT      = process.env.PORT || 3000;
+const CHAT_ID = process.env.CHAT_ID;
+const PORT = process.env.PORT || 3000;
 
 if (!BOT_TOKEN || !CHAT_ID) {
   console.error('ERROR: BOT_TOKEN and CHAT_ID must be set in .env');
   process.exit(1);
 }
 
-const TELEGRAM_API        = `https://api.telegram.org/bot${BOT_TOKEN}`;
-const TELEGRAM_SIZE_LIMIT = 20 * 1024 * 1024; // getFile only works for <= 20MB
+const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
+const TELEGRAM_SIZE_LIMIT  = 20 * 1024 * 1024; // Telegram getFile hard limit
+const COMPRESS_THRESHOLD   = 20 * 1024 * 1024; // compress only when >= 20 MB
+const TARGET_SIZE_BYTES    = 18.5 * 1024 * 1024; // aim for ~18.5 MB after compression
+const BITRATE_MIN_KBPS     = 32;
+const BITRATE_MAX_KBPS     = 128;
 
 // ─── Express Setup ─────────────────────────────────────────────────────────────
 const app = express();
@@ -38,30 +42,81 @@ const upload = multer({
   limits: { fileSize: 500 * 1024 * 1024 }, // 500MB server-side limit
 });
 
-// ─── Helper: compress audio buffer → 64kbps mono MP3 ─────────────────────────
-// Uses bundled ffmpeg. Works on any audio format (m4a, wav, ogg, mp3, etc.)
-function compressAudio(inputBuffer) {
+// ─── Helper: probe audio duration (seconds) via ffprobe ──────────────────────
+function getDuration(inputBuffer) {
   return new Promise((resolve, reject) => {
-    const inputStream  = new Readable();
+    const inputStream = new Readable();
+    inputStream.push(inputBuffer);
+    inputStream.push(null);
+
+    ffmpeg(inputStream).ffprobe((err, metadata) => {
+      if (err) return reject(new Error(`ffprobe failed: ${err.message}`));
+      const duration = metadata?.format?.duration;
+      if (!duration || duration <= 0) return reject(new Error('Could not determine audio duration.'));
+      resolve(duration);
+    });
+  });
+}
+
+// ─── Helper: compress audio buffer with a specific bitrate → mono MP3 ────────
+// inputBuffer  : raw audio bytes (any format ffmpeg understands)
+// bitrateKbps  : integer, e.g. 96
+function compressAudioAtBitrate(inputBuffer, bitrateKbps) {
+  return new Promise((resolve, reject) => {
+    const inputStream = new Readable();
     inputStream.push(inputBuffer);
     inputStream.push(null);
 
     const outputChunks = [];
     const outputStream = new PassThrough();
 
-    outputStream.on('data',  chunk => outputChunks.push(chunk));
-    outputStream.on('end',   ()    => resolve(Buffer.concat(outputChunks)));
+    outputStream.on('data', chunk => outputChunks.push(chunk));
+    outputStream.on('end', () => resolve(Buffer.concat(outputChunks)));
     outputStream.on('error', reject);
 
     ffmpeg(inputStream)
       .audioCodec('libmp3lame')
-      .audioBitrate('64k')      // 64kbps — good enough for speech
-      .audioChannels(1)         // mono — halves the size vs stereo
-      .audioFrequency(22050)    // 22kHz — sufficient for voice
+      .audioBitrate(`${bitrateKbps}k`)  // dynamic — calculated from duration
+      .audioChannels(1)                  // mono for size efficiency
+      .audioFrequency(44100)             // 44.1 kHz standard
       .format('mp3')
-      .on('error', (err) => reject(new Error(`ffmpeg failed: ${err.message}`)))
+      .on('error', err => reject(new Error(`ffmpeg failed: ${err.message}`)))
       .pipe(outputStream, { end: true });
   });
+}
+
+// ─── Helper: smart compress — targets ~18.5 MB, retries on overshoot ─────────
+// Returns { buffer, bitrateKbps, finalSizeMB }
+async function smartCompress(inputBuffer) {
+  // 1. Probe duration
+  const duration = await getDuration(inputBuffer);
+  console.log(`[compress] Duration: ${duration.toFixed(1)}s`);
+
+  // 2. Calculate ideal bitrate: target_bits / duration
+  const targetBits    = TARGET_SIZE_BYTES * 8;
+  let bitrateKbps     = Math.round(targetBits / duration / 1000);
+
+  // 3. Clamp within safe limits
+  bitrateKbps = Math.max(BITRATE_MIN_KBPS, Math.min(BITRATE_MAX_KBPS, bitrateKbps));
+  console.log(`[compress] Calculated bitrate: ${bitrateKbps} kbps`);
+
+  // 4. First compression attempt
+  console.log(`[compress] Pass 1 — encoding at ${bitrateKbps} kbps...`);
+  let compressed = await compressAudioAtBitrate(inputBuffer, bitrateKbps);
+  let finalSizeMB = compressed.length / (1024 * 1024);
+  console.log(`[compress] Pass 1 result: ${finalSizeMB.toFixed(2)} MB`);
+
+  // 5. Fail-safe: if still > 20 MB, retry with 15% lower bitrate
+  if (compressed.length >= TELEGRAM_SIZE_LIMIT) {
+    const retryBitrate = Math.max(BITRATE_MIN_KBPS, Math.floor(bitrateKbps * 0.85));
+    console.log(`[compress] ⚠ Still over 20 MB! Retrying at ${retryBitrate} kbps...`);
+    compressed  = await compressAudioAtBitrate(inputBuffer, retryBitrate);
+    finalSizeMB = compressed.length / (1024 * 1024);
+    bitrateKbps = retryBitrate;
+    console.log(`[compress] Pass 2 result: ${finalSizeMB.toFixed(2)} MB`);
+  }
+
+  return { buffer: compressed, bitrateKbps, finalSizeMB };
 }
 
 // ─── Helper: get a fresh streaming URL from a Telegram file_id ────────────────
@@ -76,33 +131,46 @@ async function getFileUrl(fileId) {
 // ─── POST /upload ──────────────────────────────────────────────────────────────
 // Flow:
 //   1. Receive any audio file (any size, any format)
-//   2. If > 20MB → auto-compress to 64kbps mono MP3
-//   3. Upload to Telegram
-//   4. Return stream_url (proxy) + file_id (permanent)
+//   2. If < 20 MB  → upload original (no quality loss)
+//   3. If >= 20 MB → smart-compress targeting ~18.5 MB
+//   4. Upload to Telegram (5-minute timeout)
+//   5. Return stream_url (proxy) + file_id (permanent)
 app.post('/upload', upload.single('audio'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file received. Field name must be "audio".' });
   }
 
-  const originalMB  = (req.file.size / (1024 * 1024)).toFixed(1);
-  const needsCompress = req.file.size > TELEGRAM_SIZE_LIMIT;
+  const originalMB    = (req.file.size / (1024 * 1024)).toFixed(2);
+  const needsCompress = req.file.size >= COMPRESS_THRESHOLD;
 
   console.log(`[upload] Received: ${req.file.originalname} (${originalMB} MB)`);
 
   let audioBuffer   = req.file.buffer;
   let audioFilename = req.file.originalname;
   let compressedMB  = null;
+  let finalBitrate  = null;
   let wasCompressed = false;
 
-  // ── Auto-compress if too large ──────────────────────────────────────────────
-  if (needsCompress) {
-    console.log(`[compress] File is ${originalMB}MB > 20MB — compressing to 64kbps mono MP3...`);
+  // ── Skip compression for files under 20 MB ──────────────────────────────────
+  if (!needsCompress) {
+    console.log(`[upload] File is ${originalMB} MB < 20 MB — uploading original (no compression).`);
+  } else {
+    // ── Smart-compress files >= 20 MB ─────────────────────────────────────────
+    console.log(`[compress] File is ${originalMB} MB >= 20 MB — starting smart compression...`);
     try {
-      audioBuffer = await compressAudio(req.file.buffer);
+      const result  = await smartCompress(req.file.buffer);
+      audioBuffer   = result.buffer;
+      finalBitrate  = result.bitrateKbps;
+      compressedMB  = result.finalSizeMB.toFixed(2);
       audioFilename = audioFilename.replace(/\.[^.]+$/, '') + '_compressed.mp3';
-      compressedMB  = (audioBuffer.length / (1024 * 1024)).toFixed(1);
       wasCompressed = true;
-      console.log(`[compress] Done. ${originalMB}MB → ${compressedMB}MB`);
+      console.log(`[compress] ✓ Done. ${originalMB} MB → ${compressedMB} MB @ ${finalBitrate} kbps`);
+
+      // Validate compressed size before upload
+      if (audioBuffer.length >= TELEGRAM_SIZE_LIMIT) {
+        console.error(`[compress] ✗ Compressed file (${compressedMB} MB) still exceeds 20 MB limit!`);
+        return res.status(500).json({ error: `Compression could not reduce file below 20 MB (result: ${compressedMB} MB).` });
+      }
     } catch (err) {
       console.error(`[compress] Failed: ${err.message}`);
       return res.status(500).json({ error: `Compression failed: ${err.message}` });
@@ -114,18 +182,17 @@ app.post('/upload', upload.single('audio'), async (req, res) => {
     const form = new FormData();
     form.append('chat_id', CHAT_ID);
     form.append('audio', audioBuffer, {
-      filename:    audioFilename,
+      filename: audioFilename,
       contentType: 'audio/mpeg',
-      knownLength:  audioBuffer.length,
+      knownLength: audioBuffer.length,
     });
 
-    console.log(`[upload] Sending to Telegram (${(audioBuffer.length / (1024 * 1024)).toFixed(1)}MB)...`);
-
+    console.log(`[upload] Sending to Telegram (${(audioBuffer.length / (1024 * 1024)).toFixed(2)} MB) — timeout 5 min...`);
     const sendRes = await axios.post(`${TELEGRAM_API}/sendAudio`, form, {
       headers: { ...form.getHeaders() },
       maxBodyLength: Infinity,
       maxContentLength: Infinity,
-      timeout: 120000,
+      timeout: 300000, // 5 minutes — large files can be slow
     });
 
     if (!sendRes.data.ok) {
@@ -139,13 +206,14 @@ app.post('/upload', upload.single('audio'), async (req, res) => {
     const telegramUrl = await getFileUrl(fileId);
 
     return res.json({
-      success:       true,
-      file_id:       fileId,          // ← permanent — store in data.json
-      stream_url:    `${req.protocol}://${req.get('host')}/stream/${fileId}`,
-      telegram_url:  telegramUrl,
-      original_mb:   originalMB,
+      success: true,
+      file_id: fileId,          // ← permanent — store in data.json
+      stream_url: `${req.protocol}://${req.get('host')}/stream/${fileId}`,
+      telegram_url: telegramUrl,
+      original_mb: originalMB,
       compressed_mb: wasCompressed ? compressedMB : null,
       was_compressed: wasCompressed,
+      bitrate_kbps: finalBitrate,
     });
 
   } catch (err) {
