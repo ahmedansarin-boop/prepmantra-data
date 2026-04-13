@@ -306,9 +306,16 @@ app.get('/stream/:fileId', async (req, res) => {
   }
 });
 
+// ─── Static Files — Serve the Admin Dashboard ──────────────────────────────────
+app.use(express.static(path.join(__dirname, '.')));
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
 // ─── GET / ─────────────────────────────────────────────────────────────────────
 app.get('/', (_req, res) => {
-  res.send('PrepMantra backend running 🎧');
+  res.send('PrepMantra Studio Backend running 🎧 <br> <a href="/admin">Open Admin Panel</a>');
 });
 
 // ─── GET /health ───────────────────────────────────────────────────────────────

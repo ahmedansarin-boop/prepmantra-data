@@ -1133,6 +1133,11 @@
     const LS_KEY = 'prepmantra_v3';
     const LS_URL_KEY = 'prepmantra_base_url';
 
+    // Auto-detect local backend
+    if (!localStorage.getItem(LS_URL_KEY) && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      localStorage.setItem(LS_URL_KEY, window.location.origin);
+    }
+
     let BASE_URL = forceHttps(localStorage.getItem(LS_URL_KEY) || 'https://prepmantra-data.onrender.com');
     document.getElementById('baseUrlInput').value = BASE_URL;
 
@@ -1569,6 +1574,9 @@
              save(); 
              render(); 
              toast('Episode deleted ✓');
+             
+             // AUTOMATIC SYNC: Push to cloud immediately after local delete
+             syncToGitHub(); 
           } else {
              toast('Error: Object reference lost. Please refresh.', true);
           }
