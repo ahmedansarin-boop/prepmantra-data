@@ -17,9 +17,33 @@
           "id": "bpcc_106_2_टिचनर_की_आत्म_निरीक्",
           "title": "टिचनर की आत्म निरीक्षण विधि का मूल्यांकन",
           "description": "",
-          "audio_url": "http://prepmantra-data.onrender.com/stream/CQACAgUAAyEGAATt1pZBAAMUadyW9mEc4E0VGApQ9HGKf4YoU8AAAkQcAAJ8LOhWAzF0tM-bugg7BA",
+          "audio_url": "https://prepmantra-data.onrender.com/stream/CQACAgUAAyEGAATt1pZBAAMUadyW9mEc4E0VGApQ9HGKf4YoU8AAAkQcAAJ8LOhWAzF0tM-bugg7BA",
           "duration": 765,
           "order": 2
+        },
+        {
+          "id": "bpcc_106_3_darshan_se_vigyan_ta",
+          "title": "Darshan se Vigyan tak Manovigyan ka safar",
+          "description": "",
+          "audio_url": "http://prepmantra-data.onrender.com/stream/CQACAgUAAyEGAATt1pZBAAMVadysfsi1OwQbnKSOdMfW_y2ox_gAAmwcAAJ8LOhWD0Hn5j25dUs7BA",
+          "duration": 723,
+          "order": 3
+        },
+        {
+          "id": "bpcc_106_4_टिचनर_की_आत्म_निरीक्",
+          "title": "टिचनर की आत्म निरीक्षण विधि का मूल्यांकन",
+          "description": "",
+          "audio_url": "http://prepmantra-data.onrender.com/stream/CQACAgUAAyEGAATt1pZBAAMWadys1O6ycDL5uceYFqhojowCTIYAAm4cAAJ8LOhWCG9jvKyqrRE7BA",
+          "duration": 765,
+          "order": 4
+        },
+        {
+          "id": "bpcc_106_5_कैसे_बना_मनोविज्ञान_",
+          "title": "कैसे बना मनोविज्ञान एक सटीक विज्ञान",
+          "description": "",
+          "audio_url": "http://prepmantra-data.onrender.com/stream/CQACAgUAAyEGAATt1pZBAAMXadyvBI9pjgnjd7_Gt58x_0XP9koAAnscAAJ8LOhWsfgXWLrgdlU7BA",
+          "duration": 807,
+          "order": 5
         }
       ]
     }
