@@ -1382,16 +1382,23 @@
     }
 
     function deleteCourse(idx, e) {
-      e && e.stopPropagation();
-      const c = data.categories[idx];
+      if (e) e.stopPropagation();
+      const courseToDelete = data.categories[idx];
+      if (!courseToDelete) return;
+
       askConfirm(
-        `Delete course "${c.name}"?`,
-        `This will permanently remove ${c.episodes.length} episode(s).`,
+        `Delete course "${courseToDelete.name}"?`,
+        `This will permanently remove ${courseToDelete.episodes.length} episode(s).`,
         () => {
-          data.categories.splice(idx, 1);
-          if (activeCourseIdx === idx) activeCourseIdx = null;
-          else if (activeCourseIdx > idx) activeCourseIdx--;
-          save(); render(); toast('Course deleted');
+          // Find the current index of this specific course ID (safest approach)
+          const currentIdx = data.categories.findIndex(c => c.id === courseToDelete.id);
+          if (currentIdx !== -1) {
+            data.categories.splice(currentIdx, 1);
+            if (activeCourseIdx === idx) activeCourseIdx = null;
+            else if (activeCourseIdx > idx) activeCourseIdx--;
+            save(); render(); toast('Course deleted ✓');
+            syncToGitHub();
+          }
         }
       );
     }
@@ -1545,40 +1552,30 @@
       save(); closeEpModal(); render();
     }
 
-    function deleteEpisode(epId, uiIndex) {
+    function deleteEpisode(epId) {
       const cat = data.categories[activeCourseIdx];
+      if (!cat) return;
       
-      // Get the episodes as currently shown in the UI (sorted/filtered)
-      const q = (document.getElementById('epSearch').value || '').toLowerCase();
-      const sorted = [...cat.episodes].sort((a, b) => a.order - b.order);
-      const shown = sorted.filter(ep => 
-        !q || ep.title.toLowerCase().includes(q) || ep.id.toLowerCase().includes(q)
-      );
-
-      // Identify the exact object from the UI index
-      const targetEp = shown[uiIndex];
-      if (!targetEp) {
-        toast('Selected item not found in view', true); return;
+      const epToDelete = cat.episodes.find(e => e.id === epId);
+      if (!epToDelete) {
+        toast('Cannot find episode to delete', true); return;
       }
 
       askConfirm(
-        `Delete "${targetEp.title}"?`,
+        `Delete "${epToDelete.title}"?`,
         'This will remove it from the course immediately.',
         () => {
-          // Find the index of this SPECIFIC object instance in the master episodes array
-          const masterIdx = cat.episodes.indexOf(targetEp);
+          const initialLen = cat.episodes.length;
+          cat.episodes = cat.episodes.filter(e => e.id !== epId);
           
-          if (masterIdx !== -1) {
-             cat.episodes.splice(masterIdx, 1);
-             if (playingEpId === targetEp.id) closePlayer();
+          if (cat.episodes.length < initialLen) {
+             if (playingEpId === epId) closePlayer();
              save(); 
              render(); 
              toast('Episode deleted ✓');
-             
-             // AUTOMATIC SYNC: Push to cloud immediately after local delete
-             syncToGitHub(); 
+             syncToGitHub(); // Full automatic background sync
           } else {
-             toast('Error: Object reference lost. Please refresh.', true);
+             toast('Error: Item already removed', true);
           }
         }
       );
@@ -1593,7 +1590,6 @@
       
       const epId = btn.getAttribute('data-id');
       const action = btn.getAttribute('data-action');
-      const uiIdx = parseInt(btn.getAttribute('data-index'));
       
       if (action === 'play') {
          const cat = data.categories[activeCourseIdx];
@@ -1601,7 +1597,7 @@
          if (ep) playEpisode(epId, ep.title, ep.audio_url);
       }
       else if (action === 'edit') openEditEpisode(epId);
-      else if (action === 'delete') deleteEpisode(epId, uiIdx);
+      else if (action === 'delete') deleteEpisode(epId);
     }
 
 
