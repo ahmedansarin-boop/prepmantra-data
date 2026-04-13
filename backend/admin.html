@@ -1234,6 +1234,18 @@
       return t.toLowerCase().trim()
         .replace(/[^a-z0-9\u0900-\u097f]+/gi, '_').replace(/^_+|_+$/g, '');
     }
+
+    /**
+     * Professional ASCII slugifier: removes Hindi characters to prevent ID comparison bugs.
+     * We use this to migrate internal IDs while keeping UI titles in Hindi.
+     */
+    function slugifyASCII(t) {
+      // Basic transliteration for common vowels to keep IDs semi-readable
+      const cleaned = t.toLowerCase()
+        .replace(/[आअ]/g, 'a').replace(/[इई]/g, 'i').replace(/[उऊ]/g, 'u').replace(/[एऐ]/g, 'e').replace(/[ओऔ]/g, 'o')
+        .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+      return cleaned || 'ep';
+    }
     function fmtDur(s) {
       if (!s) return '—';
       return `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
@@ -1258,7 +1270,11 @@
       document.getElementById('confirmModal').classList.add('open');
     }
     function closeConfirm() { document.getElementById('confirmModal').classList.remove('open'); _confirmCb = null; }
-    function confirmOk() { closeConfirm(); if (_confirmCb) _confirmCb(); }
+    function confirmOk() { 
+      const task = _confirmCb; // Store task before closing
+      closeConfirm();          // This sets _confirmCb to null
+      if (task) task();        // Now execute task
+    }
 
     // ─────────────────────────────────────────────────────────────────
     //  Audio Player
@@ -1374,7 +1390,35 @@
       );
     }
 
-    function selectCourse(idx) { activeCourseIdx = idx; render(); }
+    function selectCourse(idx) {
+      activeCourseIdx = idx;
+      migrateCourseIds(idx);
+      render();
+    }
+
+    function migrateCourseIds(idx) {
+      const cat = data.categories[idx];
+      if (!cat) return;
+      let changed = false;
+      
+      cat.episodes.forEach((ep, i) => {
+        // Migration needed if ID is Hindi or if it's missing (though it shouldn't be)
+        const needsMigration = /[^\x00-\x7F]/.test(ep.id);
+        
+        if (needsMigration) {
+          const oldId = ep.id;
+          // Generate a UNIQUE stable ASCII slug
+          const rand = Math.random().toString(36).slice(-4);
+          ep.id = `${cat.id}_${slugifyASCII(ep.title).slice(0, 15)}_${rand}`;
+          console.log(`Migrated ID: ${oldId} -> ${ep.id}`);
+          changed = true;
+        }
+      });
+      if (changed) {
+        save();
+        refreshJSON(); // Ensure local state view is updated immediately
+      }
+    }
 
     // ─────────────────────────────────────────────────────────────────
     //  Episode CRUD
@@ -1495,29 +1539,38 @@
       save(); closeEpModal(); render();
     }
 
-    function deleteEpisode(epId) {
+    function deleteEpisode(epId, uiIndex) {
       const cat = data.categories[activeCourseIdx];
-      const ep = cat.episodes.find(e => e.id === epId);
-      if (!ep) {
-        toast('Episode record not found', true); return;
+      
+      // Get the episodes as currently shown in the UI (sorted/filtered)
+      const q = (document.getElementById('epSearch').value || '').toLowerCase();
+      const sorted = [...cat.episodes].sort((a, b) => a.order - b.order);
+      const shown = sorted.filter(ep => 
+        !q || ep.title.toLowerCase().includes(q) || ep.id.toLowerCase().includes(q)
+      );
+
+      // Identify the exact object from the UI index
+      const targetEp = shown[uiIndex];
+      if (!targetEp) {
+        toast('Selected item not found in view', true); return;
       }
 
       askConfirm(
-        `Delete "${ep.title}"?`,
-        'This action is permanent and cannot be undone.',
+        `Delete "${targetEp.title}"?`,
+        'This will remove it from the course immediately.',
         () => {
-          const initialCount = cat.episodes.length;
-          cat.episodes = cat.episodes.filter(e => e.id !== epId);
+          // Find the index of this SPECIFIC object instance in the master episodes array
+          const masterIdx = cat.episodes.indexOf(targetEp);
           
-          if (cat.episodes.length === initialCount) {
-             // Fallback: search by content if ID comparison failed (shouldn't happen with ASCII IDs)
-             const idx = cat.episodes.findIndex(e => e.title === ep.title && e.duration === ep.duration);
-             if (idx !== -1) cat.episodes.splice(idx, 1);
-             else { toast('Critical error: Could not find record to delete', true); return; }
+          if (masterIdx !== -1) {
+             cat.episodes.splice(masterIdx, 1);
+             if (playingEpId === targetEp.id) closePlayer();
+             save(); 
+             render(); 
+             toast('Episode deleted ✓');
+          } else {
+             toast('Error: Object reference lost. Please refresh.', true);
           }
-
-          if (playingEpId === epId) closePlayer();
-          save(); render(); toast('Episode deleted ✓');
         }
       );
     }
@@ -1531,15 +1584,15 @@
       
       const epId = btn.getAttribute('data-id');
       const action = btn.getAttribute('data-action');
-      if (!epId || !action) return;
+      const uiIdx = parseInt(btn.getAttribute('data-index'));
       
-      const cat = data.categories[activeCourseIdx];
-      const ep = cat.episodes.find(x => x.id === epId);
-      if (!ep) return;
-
-      if (action === 'play') playEpisode(epId, ep.title, ep.audio_url);
+      if (action === 'play') {
+         const cat = data.categories[activeCourseIdx];
+         const ep = cat.episodes.find(x => x.id === epId);
+         if (ep) playEpisode(epId, ep.title, ep.audio_url);
+      }
       else if (action === 'edit') openEditEpisode(epId);
-      else if (action === 'delete') deleteEpisode(epId);
+      else if (action === 'delete') deleteEpisode(epId, uiIdx);
     }
 
 
@@ -1808,7 +1861,7 @@
         </tr>
       </thead>
       <tbody>
-        ${shown.map((ep) => {
+        ${shown.map((ep, i) => {
         const hasUrl = !!ep.audio_url;
         const playing = playingEpId === ep.id;
         return `
@@ -1828,13 +1881,13 @@
             <td>
               <div class="row-actions">
                 <button class="play-btn ${playing ? 'playing' : ''}" 
-                  data-id="${ep.id}" data-action="play"
+                  data-id="${ep.id}" data-action="play" data-index="${i}"
                   title="${playing ? 'Now playing' : 'Play preview'}"
                   ${!hasUrl ? 'disabled style="opacity:.3;cursor:not-allowed"' : ''}>
                   ${playing ? '♫' : '▶'}
                 </button>
-                <button class="btn btn-edit btn-xs" data-id="${ep.id}" data-action="edit" title="Edit">✏</button>
-                <button class="btn btn-danger btn-xs" data-id="${ep.id}" data-action="delete" title="Delete">✕</button>
+                <button class="btn btn-edit btn-xs" data-id="${ep.id}" data-action="edit" data-index="${i}" title="Edit">✏</button>
+                <button class="btn btn-danger btn-xs" data-id="${ep.id}" data-action="delete" data-index="${i}" title="Delete">✕</button>
               </div>
             </td>
           </tr>`;
