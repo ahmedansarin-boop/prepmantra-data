@@ -382,6 +382,18 @@
       text-overflow: ellipsis
     }
 
+    .ep-id-tag {
+      font-size: 9px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      padding: 1px 4px;
+      display: inline-block;
+      margin-top: 3px;
+      font-family: monospace;
+      opacity: 0.6
+    }
+
     .status-ok {
       color: var(--success);
       font-size: 12px;
@@ -1003,7 +1015,7 @@
 
       <div class="field">
         <label>Episode Title</label>
-        <input type="text" id="epTitle" placeholder="Vedic Period" />
+        <input type="text" id="epTitle" placeholder="Vedic Period" oninput="autoGenEpId()" />
       </div>
       <div class="field">
         <label>Description <span>(optional)</span></label>
@@ -1421,6 +1433,32 @@
 
     function closeEpModal() { document.getElementById('epModal').classList.remove('open'); }
 
+    /**
+     * Professional ID generator: slugifies title and ensures uniqueness in category.
+     * Use ASCII-safe slugs to avoid Unicode comparison issues in some browsers.
+     */
+    function generateUniqueId(title, catId, existingEpisodes) {
+      // Create a base slug (remove non-ASCII)
+      const asciiTitle = title.replace(/[^\x00-\x7F]/g, '').trim() || 'ep';
+      let id = `${catId}_${slugify(asciiTitle).slice(0, 20)}_${Date.now().toString().slice(-4)}`;
+      
+      // Safety check for collisions
+      let finalId = id;
+      let suffix = 1;
+      while (existingEpisodes.find(e => e.id === finalId)) {
+        finalId = `${id}_${suffix++}`;
+      }
+      return finalId;
+    }
+
+    function autoGenEpId() {
+      if (editingEpId) return; // Don't auto-change ID while editing existing episode
+      const title = document.getElementById('epTitle').value;
+      const cat = data.categories[activeCourseIdx];
+      if (!cat) return;
+      document.getElementById('epId').value = generateUniqueId(title || 'audio', cat.id, cat.episodes);
+    }
+
     function saveEpisode() {
       const title = document.getElementById('epTitle').value.trim();
       const desc = document.getElementById('epDesc').value.trim();
@@ -1432,18 +1470,25 @@
       if (!title) { toast('Title is required', true); return; }
       if (!id) { toast('Episode ID is required', true); return; }
       if (!order) { toast('Order is required', true); return; }
-      if (!duration) { toast('Duration is required (in seconds)', true); return; }
+      if (!duration) { toast('Duration (seconds) is required', true); return; }
 
       const cat = data.categories[activeCourseIdx];
 
       if (editingEpId) {
         const idx = cat.episodes.findIndex(e => e.id === editingEpId);
         if (idx === -1) { toast('Episode not found', true); return; }
-        if (id !== editingEpId && cat.episodes.find(e => e.id === id)) { toast(`ID "${id}" already exists`, true); return; }
+        // check ID collision if ID changed
+        if (id !== editingEpId && cat.episodes.find(e => e.id === id)) { 
+          toast(`ID "${id}" already exists in this course`, true); 
+          return; 
+        }
         cat.episodes[idx] = { id, title, description: desc, audio_url: url, duration, order };
         toast(`"${title}" updated ✓`);
       } else {
-        if (cat.episodes.find(e => e.id === id)) { toast(`Episode ID "${id}" already exists`, true); return; }
+        if (cat.episodes.find(e => e.id === id)) { 
+          toast(`ID "${id}" already taken (try a different one)`, true); 
+          return; 
+        }
         cat.episodes.push({ id, title, description: desc, audio_url: url, duration, order });
         toast(`"${title}" added ✓`);
       }
@@ -1453,17 +1498,50 @@
     function deleteEpisode(epId) {
       const cat = data.categories[activeCourseIdx];
       const ep = cat.episodes.find(e => e.id === epId);
-      if (!ep) return;
+      if (!ep) {
+        toast('Episode record not found', true); return;
+      }
+
       askConfirm(
         `Delete "${ep.title}"?`,
-        'This action cannot be undone.',
+        'This action is permanent and cannot be undone.',
         () => {
+          const initialCount = cat.episodes.length;
           cat.episodes = cat.episodes.filter(e => e.id !== epId);
+          
+          if (cat.episodes.length === initialCount) {
+             // Fallback: search by content if ID comparison failed (shouldn't happen with ASCII IDs)
+             const idx = cat.episodes.findIndex(e => e.title === ep.title && e.duration === ep.duration);
+             if (idx !== -1) cat.episodes.splice(idx, 1);
+             else { toast('Critical error: Could not find record to delete', true); return; }
+          }
+
           if (playingEpId === epId) closePlayer();
-          save(); render(); toast('Episode deleted');
+          save(); render(); toast('Episode deleted ✓');
         }
       );
     }
+
+    /**
+     * Robust event delegation for episode table actions
+     */
+    function handleEpAction(e) {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      
+      const epId = btn.getAttribute('data-id');
+      const action = btn.getAttribute('data-action');
+      if (!epId || !action) return;
+      
+      const cat = data.categories[activeCourseIdx];
+      const ep = cat.episodes.find(x => x.id === epId);
+      if (!ep) return;
+
+      if (action === 'play') playEpisode(epId, ep.title, ep.audio_url);
+      else if (action === 'edit') openEditEpisode(epId);
+      else if (action === 'delete') deleteEpisode(epId);
+    }
+
 
     // ─────────────────────────────────────────────────────────────────
     //  Episode reordering
@@ -1529,14 +1607,14 @@
         document.getElementById('epOrder').value = parsed.order;
 
       if (!document.getElementById('epId').value && activeCourseIdx !== null) {
-        const catId = data.categories[activeCourseIdx].id;
-        const ord = parsed.order || (data.categories[activeCourseIdx].episodes.length + 1);
-        document.getElementById('epId').value = `${catId}_${ord}_${slugify(parsed.title).slice(0, 20)}`;
+        const cat = data.categories[activeCourseIdx];
+        document.getElementById('epId').value = generateUniqueId(parsed.title || 'audio', cat.id, cat.episodes);
       }
 
       const dur = await getAudioDuration(file);
       if (dur && !document.getElementById('epDuration').value)
         document.getElementById('epDuration').value = dur;
+
 
       const large = file.size > 20 * 1024 * 1024;
       const durStr = dur ? fmtDur(dur) : '(enter manually)';
@@ -1680,9 +1758,9 @@
     }
 
     function renderEpisodes() {
+      const panel = document.getElementById('episodePanel');
       const titleEl = document.getElementById('epPanelTitle');
       const metaEl = document.getElementById('epPanelMeta');
-      const panel = document.getElementById('episodePanel');
       const btn = document.getElementById('addEpBtn');
       const searchEl = document.getElementById('epSearch');
 
@@ -1692,9 +1770,9 @@
         btn.disabled = true;
         searchEl.style.display = 'none';
         panel.innerHTML = `<div class="placeholder">
-      <div class="ph-icon">👈</div>
-      <p>Select a course to manage its episodes</p>
-    </div>`;
+          <div class="ph-icon">👈</div>
+          <p>Select a course on the left to manage its episodes</p>
+        </div>`;
         return;
       }
 
@@ -1702,74 +1780,61 @@
       titleEl.textContent = cat.name;
       metaEl.textContent = `ID: ${cat.id}`;
       btn.disabled = false;
-      searchEl.style.display = '';
+      searchEl.style.display = 'block';
 
       const q = (searchEl.value || '').toLowerCase();
       const sorted = [...cat.episodes].sort((a, b) => a.order - b.order);
-      const shown = sorted.filter(ep => !q || ep.title.toLowerCase().includes(q));
+      const shown = sorted.filter(ep => 
+        !q || ep.title.toLowerCase().includes(q) || ep.id.toLowerCase().includes(q)
+      );
 
       if (!cat.episodes.length) {
         panel.innerHTML = `<div class="placeholder">
-      <div class="ph-icon">🎵</div><p>No episodes yet</p>
-      <button class="btn btn-accent" onclick="openNewEpisode()">Add first episode</button>
-    </div>`;
-        return;
-      }
-      if (!shown.length) {
-        panel.innerHTML = `<div class="placeholder" style="min-height:180px">
-      <div class="ph-icon">🔍</div><p>No episodes match "${q}"</p></div>`;
+          <div class="ph-icon">🎵</div><p>No episodes yet</p>
+          <button class="btn btn-accent" onclick="openNewEpisode()">Add first episode</button>
+        </div>`;
         return;
       }
 
       panel.innerHTML = `
-    <table class="ep-table">
+    <table class="ep-table" onclick="handleEpAction(event)">
       <thead>
         <tr>
           <th style="width:60px">#</th>
           <th>Episode</th>
-          <th style="width:90px">Duration</th>
-          <th style="width:120px">Audio</th>
-          <th style="width:150px;text-align:right">Actions</th>
+          <th style="width:80px">Duration</th>
+          <th>Audio Status</th>
+          <th style="width:120px;text-align:right">Actions</th>
         </tr>
       </thead>
       <tbody>
-        ${shown.map((ep, idx) => {
-        const isFirst = idx === 0;
-        const isLast = idx === shown.length - 1;
-        const playing = playingEpId === ep.id;
+        ${shown.map((ep) => {
         const hasUrl = !!ep.audio_url;
+        const playing = playingEpId === ep.id;
         return `
-          <tr>
-            <td>
-              <div class="ord-cell">
-                <div class="ep-num">${ep.order}</div>
-                <div class="ord-btns">
-                  <button class="ord-btn" ${isFirst ? 'disabled' : ''} onclick="moveEpisode('${ep.id}',-1)" title="Move up">▲</button>
-                  <button class="ord-btn" ${isLast ? 'disabled' : ''} onclick="moveEpisode('${ep.id}',1)" title="Move down">▼</button>
-                </div>
-              </div>
-            </td>
+          <tr class="${playing ? 'row-playing' : ''}">
+            <td class="ep-order">${ep.order}</td>
             <td class="ep-title-cell">
               <div class="ep-title">${ep.title}</div>
               ${ep.description ? `<div class="ep-desc">${ep.description}</div>` : ''}
+              <div class="ep-id-tag">ID: ${ep.id}</div>
             </td>
             <td><span style="font-size:11px;color:var(--muted)">${fmtDur(ep.duration)}</span></td>
             <td>
               ${hasUrl
-            ? `<div class="status-ok">✔ Ready</div>
-                   <span class="ep-url-small" title="${ep.audio_url}">${ep.audio_url}</span>`
-            : `<div class="status-warn">⚠ Not Uploaded</div>`}
+            ? `<div class="status-ok">✔ Ready</div>`
+            : `<div class="status-warn">⚠ No Audio</div>`}
             </td>
             <td>
               <div class="row-actions">
-                <button class="play-btn ${playing ? 'playing' : ''}"
-                  onclick="playEpisode('${ep.id}','${ep.title.replace(/'/g, "\\'")}','${ep.audio_url || ''}')"
+                <button class="play-btn ${playing ? 'playing' : ''}" 
+                  data-id="${ep.id}" data-action="play"
                   title="${playing ? 'Now playing' : 'Play preview'}"
                   ${!hasUrl ? 'disabled style="opacity:.3;cursor:not-allowed"' : ''}>
                   ${playing ? '♫' : '▶'}
                 </button>
-                <button class="btn btn-edit btn-xs" onclick="openEditEpisode('${ep.id}')">✏</button>
-                <button class="btn btn-danger btn-xs" onclick="deleteEpisode('${ep.id}')">✕</button>
+                <button class="btn btn-edit btn-xs" data-id="${ep.id}" data-action="edit" title="Edit">✏</button>
+                <button class="btn btn-danger btn-xs" data-id="${ep.id}" data-action="delete" title="Delete">✕</button>
               </div>
             </td>
           </tr>`;
@@ -1777,6 +1842,7 @@
       </tbody>
     </table>`;
     }
+
 
     function updateStats() {
       const c = data.categories.length;
