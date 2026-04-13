@@ -25,11 +25,13 @@ if (!BOT_TOKEN || !CHAT_ID) {
 }
 
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
-const TELEGRAM_SIZE_LIMIT  = 20 * 1024 * 1024; // Telegram getFile hard limit
-const COMPRESS_THRESHOLD   = 20 * 1024 * 1024; // compress only when >= 20 MB
-const TARGET_SIZE_BYTES    = 18.5 * 1024 * 1024; // aim for ~18.5 MB after compression
+const TELEGRAM_SIZE_LIMIT  = 20 * 1024 * 1024; 
+const COMPRESS_THRESHOLD   = 20 * 1024 * 1024; 
+const TARGET_SIZE_BYTES    = 16 * 1024 * 1024;    // Lowered to 16MB for faster upload
 const BITRATE_MIN_KBPS     = 32;
 const BITRATE_MAX_KBPS     = 128;
+const NETWORK_TIMEOUT      = 600000;              // 10 minutes 
+
 
 // ─── Express Setup ─────────────────────────────────────────────────────────────
 const app = express();
@@ -102,19 +104,26 @@ async function smartCompress(inputBuffer) {
 
   // 4. First compression attempt
   console.log(`[compress] Pass 1 — encoding at ${bitrateKbps} kbps...`);
+  console.time('[compress] pass1_time');
   let compressed = await compressAudioAtBitrate(inputBuffer, bitrateKbps);
+  console.timeEnd('[compress] pass1_time');
+  
   let finalSizeMB = compressed.length / (1024 * 1024);
   console.log(`[compress] Pass 1 result: ${finalSizeMB.toFixed(2)} MB`);
 
-  // 5. Fail-safe: if still > 20 MB, retry with 15% lower bitrate
+  // 5. Fail-safe: if still > 20 MB, retry with 20% lower bitrate
   if (compressed.length >= TELEGRAM_SIZE_LIMIT) {
-    const retryBitrate = Math.max(BITRATE_MIN_KBPS, Math.floor(bitrateKbps * 0.85));
+    const retryBitrate = Math.max(BITRATE_MIN_KBPS, Math.floor(bitrateKbps * 0.80));
     console.log(`[compress] ⚠ Still over 20 MB! Retrying at ${retryBitrate} kbps...`);
+    console.time('[compress] pass2_time');
     compressed  = await compressAudioAtBitrate(inputBuffer, retryBitrate);
+    console.timeEnd('[compress] pass2_time');
+    
     finalSizeMB = compressed.length / (1024 * 1024);
     bitrateKbps = retryBitrate;
     console.log(`[compress] Pass 2 result: ${finalSizeMB.toFixed(2)} MB`);
   }
+
 
   return { buffer: compressed, bitrateKbps, finalSizeMB };
 }
@@ -187,13 +196,17 @@ app.post('/upload', upload.single('audio'), async (req, res) => {
       knownLength: audioBuffer.length,
     });
 
-    console.log(`[upload] Sending to Telegram (${(audioBuffer.length / (1024 * 1024)).toFixed(2)} MB) — timeout 5 min...`);
+    console.log(`[upload] Sending to Telegram (${(audioBuffer.length / (1024 * 1024)).toFixed(2)} MB)...`);
+    console.time('[upload] telegram_time');
+    
     const sendRes = await axios.post(`${TELEGRAM_API}/sendAudio`, form, {
       headers: { ...form.getHeaders() },
       maxBodyLength: Infinity,
       maxContentLength: Infinity,
-      timeout: 300000, // 5 minutes — large files can be slow
+      timeout: NETWORK_TIMEOUT, 
     });
+    
+    console.timeEnd('[upload] telegram_time');
 
     if (!sendRes.data.ok) {
       throw new Error(`Telegram sendAudio failed: ${sendRes.data.description}`);
