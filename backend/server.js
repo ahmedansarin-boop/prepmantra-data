@@ -10,6 +10,8 @@ const FormData = require('form-data');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('ffmpeg-static');
 const { Readable, PassThrough } = require('stream');
+const os = require('os');
+const crypto = require('crypto');
 
 // Point fluent-ffmpeg to the bundled binary — no manual ffmpeg install needed
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -22,9 +24,10 @@ const { exec } = require('child_process');
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
 const PORT = process.env.PORT || 3000;
+const BASE_URL = (process.env.BASE_URL || '').replace(/\/+$/, '');
 
-if (!BOT_TOKEN || !CHAT_ID) {
-  console.error('ERROR: BOT_TOKEN and CHAT_ID must be set in .env');
+if (!BOT_TOKEN || !CHAT_ID || !BASE_URL) {
+  console.error('ERROR: BOT_TOKEN, CHAT_ID, and BASE_URL must be set in .env');
   process.exit(1);
 }
 
@@ -49,19 +52,41 @@ const upload = multer({
 });
 
 // ─── Helper: probe audio duration (seconds) via ffprobe ──────────────────────
-function getDuration(inputBuffer) {
+function probeFile(filePath) {
   return new Promise((resolve, reject) => {
-    const inputStream = new Readable();
-    inputStream.push(inputBuffer);
-    inputStream.push(null);
+    const timeout = setTimeout(() => {
+      reject(new Error('ffprobe timeout: Analysis took longer than 30 seconds.'));
+    }, 30000);
 
-    ffmpeg(inputStream).ffprobe((err, metadata) => {
+    ffmpeg.ffprobe(filePath, (err, metadata) => {
+      clearTimeout(timeout);
       if (err) return reject(new Error(`ffprobe failed: ${err.message}`));
-      const duration = metadata?.format?.duration;
-      if (!duration || duration <= 0) return reject(new Error('Could not determine audio duration.'));
-      resolve(duration);
+      resolve(metadata);
     });
   });
+}
+
+async function getDuration(inputBuffer) {
+  const tempFilePath = path.join(
+    os.tmpdir(),
+    `prepmantra-${Date.now()}-${crypto.randomUUID()}.tmp`
+  );
+
+  try {
+    await fs.promises.writeFile(tempFilePath, inputBuffer);
+
+    const metadata = await probeFile(tempFilePath);
+    const rawDuration = metadata?.format?.duration;
+    const duration = Number(rawDuration);
+
+    if (!duration || Number.isNaN(duration)) {
+      throw new Error('[analyze] Invalid duration from ffprobe');
+    }
+
+    return duration;
+  } finally {
+    fs.promises.unlink(tempFilePath).catch(() => {});
+  }
 }
 
 // ─── Helper: compress audio buffer with a specific bitrate → mono MP3 ────────
@@ -96,11 +121,17 @@ function compressAudioAtBitrate(inputBuffer, bitrateKbps) {
 async function smartCompress(inputBuffer) {
   // 1. Probe duration
   const duration = await getDuration(inputBuffer);
-  console.log(`[compress] Duration: ${duration.toFixed(1)}s`);
+  const safeDuration = Number(duration);
+
+  if (!safeDuration || Number.isNaN(safeDuration)) {
+    throw new Error('[compress] Invalid duration');
+  }
+
+  console.log(`[compress] Duration: ${safeDuration.toFixed(1)}s`);
 
   // 2. Calculate ideal bitrate: target_bits / duration
   const targetBits    = TARGET_SIZE_BYTES * 8;
-  let bitrateKbps     = Math.round(targetBits / duration / 1000);
+  let bitrateKbps     = Math.round(targetBits / safeDuration / 1000);
 
   // 3. Clamp within safe limits
   bitrateKbps = Math.max(BITRATE_MIN_KBPS, Math.min(BITRATE_MAX_KBPS, bitrateKbps));
@@ -140,6 +171,58 @@ async function getFileUrl(fileId) {
   if (!res.data.ok) throw new Error(`getFile failed: ${res.data.description}`);
   return `https://api.telegram.org/file/bot${BOT_TOKEN}/${res.data.result.file_path}`;
 }
+
+// ─── POST /analyze ─────────────────────────────────────────────────────────────
+// Accepts a multipart audio file, probes it with ffprobe, returns compression
+// stats WITHOUT uploading. Used by the CMS before the user clicks "Upload".
+app.post('/analyze', upload.single('audio'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file received. Field name must be "audio".' });
+  }
+
+  const originalMB = req.file.size / (1024 * 1024);
+  const needsCompression = req.file.size >= COMPRESS_THRESHOLD;
+
+  try {
+    const duration = await getDuration(req.file.buffer);
+    const safeDuration = Number(duration);
+
+    if (!safeDuration || Number.isNaN(safeDuration)) {
+      throw new Error('[analyze] Invalid duration from ffprobe');
+    }
+
+    // Same calculation as smartCompress()
+    const targetBits  = TARGET_SIZE_BYTES * 8;
+    let bitrateKbps   = Math.round(targetBits / safeDuration / 1000);
+    bitrateKbps       = Math.max(BITRATE_MIN_KBPS, Math.min(BITRATE_MAX_KBPS, bitrateKbps));
+
+    // Original bitrate (kbps) = fileSize * 8 / duration / 1000
+    const originalBitrateKbps = Math.round((req.file.size * 8) / safeDuration / 1000);
+
+    const estimatedCompressedMB = needsCompression
+      ? (bitrateKbps * 1000 * safeDuration) / 8 / (1024 * 1024)
+      : originalMB;
+
+    const qualityPct = needsCompression && originalBitrateKbps > 0
+      ? Math.round((bitrateKbps / originalBitrateKbps) * 100)
+      : 100;
+
+    console.log(`[analyze] ${req.file.originalname} | ${originalMB.toFixed(2)} MB | ${Math.round(safeDuration)}s | needsCompression=${needsCompression}`);
+
+    return res.json({
+      original_mb:             parseFloat(originalMB.toFixed(2)),
+      duration_seconds:        Math.round(safeDuration),
+      original_bitrate_kbps:   originalBitrateKbps,
+      needs_compression:       needsCompression,
+      estimated_compressed_mb: parseFloat(estimatedCompressedMB.toFixed(2)),
+      estimated_bitrate_kbps:  bitrateKbps,
+      quality_pct:             Math.min(100, qualityPct),
+    });
+  } catch (err) {
+    console.error(`[analyze] Failed: ${err.message}`);
+    return res.status(500).json({ error: `Analysis failed: ${err.message}` });
+  }
+});
 
 // ─── POST /upload ──────────────────────────────────────────────────────────────
 // Flow:
@@ -218,15 +301,13 @@ app.post('/upload', upload.single('audio'), async (req, res) => {
 
     const fileId = sendRes.data.result.audio.file_id;
     console.log(`[upload] Success. file_id: ${fileId}`);
-
-    // Get a fresh streaming URL
-    const telegramUrl = await getFileUrl(fileId);
+    const streamUrl = `${BASE_URL}/stream/${fileId}`;
 
     return res.json({
       success: true,
       file_id: fileId,          // ← permanent — store in data.json
-      stream_url: `${req.protocol}://${req.get('host')}/stream/${fileId}`,
-      telegram_url: telegramUrl,
+      stream_url: streamUrl,
+      telegram_url: streamUrl,  // safe legacy alias: do not expose Telegram URL/token
       original_mb: originalMB,
       compressed_mb: wasCompressed ? compressedMB : null,
       was_compressed: wasCompressed,
@@ -297,12 +378,61 @@ app.post('/save', async (req, res) => {
 // Store "http://your-server.com/stream/<file_id>" as audio_url in data.json.
 app.get('/stream/:fileId', async (req, res) => {
   try {
-    const freshUrl = await getFileUrl(req.params.fileId);
-    return res.redirect(302, freshUrl);
+    const fileId = req.params.fileId;
+    const fileUrl = await getFileUrl(fileId);
+    const upstreamHeaders = {};
+
+    if (req.headers.range) {
+      upstreamHeaders.Range = req.headers.range;
+    }
+
+    const streamRes = await axios.get(fileUrl, {
+      responseType: 'stream',
+      timeout: NETWORK_TIMEOUT,
+      headers: upstreamHeaders,
+      validateStatus: () => true,
+    });
+
+    if (streamRes.status >= 400) {
+      throw new Error(`Telegram file stream failed with status ${streamRes.status}`);
+    }
+
+    res.status(streamRes.status);
+
+    const headerNames = [
+      'content-type',
+      'content-length',
+      'content-range',
+      'accept-ranges',
+      'cache-control',
+      'etag',
+      'last-modified',
+    ];
+
+    for (const header of headerNames) {
+      if (streamRes.headers[header]) {
+        res.setHeader(header, streamRes.headers[header]);
+      }
+    }
+
+    if (!res.getHeader('content-type')) {
+      res.setHeader('content-type', 'audio/mpeg');
+    }
+
+    streamRes.data.on('error', (streamErr) => {
+      console.error(`[stream] Proxy pipe error: ${streamErr.message}`);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Streaming failed' });
+      } else {
+        res.destroy(streamErr);
+      }
+    });
+
+    return streamRes.data.pipe(res);
   } catch (err) {
     const message = err.response?.data?.description || err.message;
     console.error(`[stream] Error: ${message}`);
-    return res.status(500).json({ error: `Stream failed: ${message}` });
+    return res.status(500).json({ error: 'Streaming failed' });
   }
 });
 
@@ -332,8 +462,10 @@ app.use((err, _req, res, _next) => {
 // ─── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`PrepMantra backend running on http://localhost:${PORT}`);
-  console.log(`  GET  /           — health (Render ping)`);
-  console.log(`  POST /upload     — upload any audio (auto-compresses if > 20MB)`);
-  console.log(`  GET  /stream/:id — stream via file_id`);
-  console.log(`  GET  /health     — health check JSON`);
+  console.log(`  BASE_URL        — ${BASE_URL}`);
+  console.log(`  GET  /            — health (Render ping)`);
+  console.log(`  POST /analyze     — analyze audio: size/duration/compression estimate`);
+  console.log(`  POST /upload      — upload any audio (auto-compresses if > 20MB)`);
+  console.log(`  GET  /stream/:id  — stream via file_id`);
+  console.log(`  GET  /health      — health check JSON`);
 });
